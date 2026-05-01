@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server"
 import { exec } from "child_process"
 import { promisify } from "util"
+import fs from "fs/promises"
+import path from "path"
 
 const execAsync = promisify(exec)
+
+const BLOCKED_COMMANDS = ["rm -rf", "sudo", "mkfs", "dd if=", ":(){", "chmod 777 /"]
 
 const APP_MAP: Record<string, string> = {
   chrome: "Google Chrome",
@@ -80,6 +84,39 @@ export async function POST(request: Request) {
     if (action === "unmute") {
       await execAsync(`osascript -e "set volume output muted false"`)
       return NextResponse.json({ success: true, message: "Som ativado" })
+    }
+
+    if (action === "read_file") {
+      const filePath = path.resolve(params?.path || "")
+      const content = await fs.readFile(filePath, "utf-8")
+      const preview = content.length > 2000 ? content.slice(0, 2000) + "\n...(truncado)" : content
+      return NextResponse.json({ success: true, result: preview })
+    }
+
+    if (action === "write_file") {
+      const filePath = path.resolve(params?.path || "")
+      const content = params?.content || ""
+      await fs.writeFile(filePath, content, "utf-8")
+      return NextResponse.json({ success: true, message: `Arquivo salvo em ${filePath}` })
+    }
+
+    if (action === "list_directory") {
+      const dirPath = path.resolve(params?.path || process.env.HOME || "~")
+      const entries = await fs.readdir(dirPath, { withFileTypes: true })
+      const list = entries.map((e) => `${e.isDirectory() ? "[pasta]" : "[arquivo]"} ${e.name}`).join("\n")
+      return NextResponse.json({ success: true, result: list })
+    }
+
+    if (action === "run_command") {
+      const command = params?.command || ""
+      if (!command) return NextResponse.json({ error: "Comando vazio" }, { status: 400 })
+
+      const isBlocked = BLOCKED_COMMANDS.some((blocked) => command.includes(blocked))
+      if (isBlocked) return NextResponse.json({ error: "Comando não permitido por segurança" }, { status: 403 })
+
+      const { stdout, stderr } = await execAsync(command, { timeout: 15000 })
+      const output = (stdout || stderr || "Comando executado sem saída").slice(0, 2000)
+      return NextResponse.json({ success: true, result: output })
     }
 
     return NextResponse.json({ error: "Ação desconhecida" }, { status: 400 })

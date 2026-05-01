@@ -39,6 +39,54 @@ Mantenha respostas curtas e objetivas, adequadas para fala.`,
           },
           {
             type: "function",
+            name: "read_file",
+            description: "Lê o conteúdo de um arquivo no computador do usuário",
+            parameters: {
+              type: "object",
+              properties: {
+                path: { type: "string", description: "Caminho completo do arquivo (ex: /Users/william/Documents/notas.txt)" },
+              },
+              required: ["path"],
+            },
+          },
+          {
+            type: "function",
+            name: "write_file",
+            description: "Cria ou escreve conteúdo em um arquivo no computador",
+            parameters: {
+              type: "object",
+              properties: {
+                path: { type: "string", description: "Caminho completo do arquivo" },
+                content: { type: "string", description: "Conteúdo a escrever no arquivo" },
+              },
+              required: ["path", "content"],
+            },
+          },
+          {
+            type: "function",
+            name: "list_directory",
+            description: "Lista os arquivos e pastas de um diretório",
+            parameters: {
+              type: "object",
+              properties: {
+                path: { type: "string", description: "Caminho da pasta (ex: /Users/william/Downloads)" },
+              },
+            },
+          },
+          {
+            type: "function",
+            name: "run_command",
+            description: "Executa um comando no terminal do Mac",
+            parameters: {
+              type: "object",
+              properties: {
+                command: { type: "string", description: "Comando a executar (ex: npm install, git status, ls -la)" },
+              },
+              required: ["command"],
+            },
+          },
+          {
+            type: "function",
             name: "get_news",
             description: "Busca as últimas notícias, pode ser sobre um tema específico ou notícias gerais",
             parameters: {
