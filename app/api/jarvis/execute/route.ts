@@ -3,9 +3,6 @@ import { exec } from "child_process"
 import { promisify } from "util"
 import fs from "fs/promises"
 import path from "path"
-import { agentManager } from "@/lib/agent-manager"
-import { v4 as uuidv4 } from "uuid"
-
 const execAsync = promisify(exec)
 
 const BLOCKED_COMMANDS = ["rm -rf", "sudo", "mkfs", "dd if=", ":(){", "chmod 777 /"]
@@ -38,11 +35,16 @@ export async function POST(request: Request) {
   try {
     const { action, params, agentId } = await request.json()
 
-    // Route to remote agent if specified and action supports it
+    // Route to remote agent via ws-server
     if (agentId && REMOTE_ACTIONS.includes(action)) {
-      const commandId = uuidv4()
-      const result = await agentManager.sendCommand(agentId, commandId, action, params)
-      return NextResponse.json({ success: true, ...(result as object) })
+      const wsApi = process.env.WS_API_URL || "http://localhost:3003"
+      const res = await fetch(`${wsApi}/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId, action, params }),
+      })
+      const result = await res.json()
+      return NextResponse.json(result)
     }
 
     if (action === "open_app") {
@@ -58,9 +60,12 @@ export async function POST(request: Request) {
     }
 
     if (action === "get_agents") {
-      const agents = agentManager.getAgents()
+      const wsApi = process.env.WS_API_URL || "http://localhost:3003"
+      const res = await fetch(`${wsApi}/agents`)
+      const data = await res.json()
+      const agents = data.agents || []
       if (agents.length === 0) return NextResponse.json({ success: true, result: "Nenhum agente conectado no momento." })
-      const list = agents.map((a) => `${a.hostname} (${a.platform}) - ID: ${a.id}`).join("\n")
+      const list = agents.map((a: {hostname: string, platform: string, id: string}) => `${a.hostname} (${a.platform}) - ID: ${a.id}`).join("\n")
       return NextResponse.json({ success: true, result: list })
     }
 
