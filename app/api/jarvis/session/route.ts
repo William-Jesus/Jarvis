@@ -20,7 +20,9 @@ export async function POST() {
 Você é inteligente, sofisticado, levemente sarcástico e extremamente eficiente.
 Responda sempre em português, de forma concisa e direta.
 Trate o usuário com respeito, usando "senhor" ocasionalmente.
-Mantenha respostas curtas e objetivas, adequadas para fala.`,
+Mantenha respostas curtas e objetivas, adequadas para fala.
+
+Quando o usuário pedir para executar ações em um computador específico (ex: "no Windows", "no meu PC"), use get_agents para verificar quais agentes estão conectados e passe o agentId correto nas funções de ação.`,
         tools: [
           {
             type: "function",
@@ -36,6 +38,12 @@ Mantenha respostas curtas e objetivas, adequadas para fala.`,
               },
               required: ["app"],
             },
+          },
+          {
+            type: "function",
+            name: "get_agents",
+            description: "Lista os computadores conectados ao JARVIS (Mac, Windows, etc.)",
+            parameters: { type: "object", properties: {} },
           },
           {
             type: "function",
