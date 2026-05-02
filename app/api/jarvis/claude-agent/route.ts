@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk"
 import { exec } from "child_process"
 import { promisify } from "util"
 import fs from "fs/promises"
+import { getAuthenticatedClient } from "@/lib/google-client"
+import { google } from "googleapis"
 
 const execAsync = promisify(exec)
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -38,39 +40,154 @@ async function writeFile(filePath: string, content: string): Promise<string> {
   }
 }
 
+async function createCalendarEvent(summary: string, start: string, end: string, description?: string, location?: string): Promise<string> {
+  try {
+    const auth = await getAuthenticatedClient()
+    const calendar = google.calendar({ version: "v3", auth })
+    const event = await calendar.events.insert({
+      calendarId: "primary",
+      requestBody: {
+        summary,
+        description,
+        location,
+        start: { dateTime: start, timeZone: "America/Sao_Paulo" },
+        end: { dateTime: end, timeZone: "America/Sao_Paulo" },
+      },
+    })
+    return `Evento criado: "${summary}" em ${start}. Link: ${event.data.htmlLink}`
+  } catch (e: any) {
+    return `Erro ao criar evento: ${e.message}`
+  }
+}
+
+async function listCalendarEvents(maxResults = 10): Promise<string> {
+  try {
+    const auth = await getAuthenticatedClient()
+    const calendar = google.calendar({ version: "v3", auth })
+    const res = await calendar.events.list({
+      calendarId: "primary",
+      timeMin: new Date().toISOString(),
+      maxResults,
+      singleEvents: true,
+      orderBy: "startTime",
+    })
+    const events = res.data.items || []
+    if (!events.length) return "Nenhum evento encontrado."
+    return events.map(e => {
+      const start = e.start?.dateTime || e.start?.date || ""
+      return `- ${e.summary} | ${new Date(start).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`
+    }).join("\n")
+  } catch (e: any) {
+    return `Erro ao listar eventos: ${e.message}`
+  }
+}
+
+async function sendEmail(to: string, subject: string, body: string): Promise<string> {
+  try {
+    const auth = await getAuthenticatedClient()
+    const gmail = google.gmail({ version: "v1", auth })
+    const message = [`To: ${to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8", "", body].join("\n")
+    const encoded = Buffer.from(message).toString("base64url")
+    await gmail.users.messages.send({ userId: "me", requestBody: { raw: encoded } })
+    return `Email enviado para ${to} com assunto "${subject}".`
+  } catch (e: any) {
+    return `Erro ao enviar email: ${e.message}`
+  }
+}
+
+async function listEmails(maxResults = 5, query = ""): Promise<string> {
+  try {
+    const auth = await getAuthenticatedClient()
+    const gmail = google.gmail({ version: "v1", auth })
+    const res = await gmail.users.messages.list({ userId: "me", maxResults, q: query || "in:inbox" })
+    const messages = res.data.messages || []
+    if (!messages.length) return "Nenhum email encontrado."
+
+    const details = await Promise.all(messages.slice(0, 5).map(async (m) => {
+      const msg = await gmail.users.messages.get({ userId: "me", id: m.id!, format: "metadata", metadataHeaders: ["From", "Subject", "Date"] })
+      const headers = msg.data.payload?.headers || []
+      const get = (name: string) => headers.find(h => h.name === name)?.value || ""
+      return `- De: ${get("From")}\n  Assunto: ${get("Subject")}\n  Data: ${get("Date")}`
+    }))
+    return details.join("\n\n")
+  } catch (e: any) {
+    return `Erro ao listar emails: ${e.message}`
+  }
+}
+
 const tools: Anthropic.Tool[] = [
   {
     name: "bash",
-    description: "Executa um comando bash no servidor/Mac. Use para criar eventos no Calendar via osascript, enviar emails, gerenciar arquivos, etc.",
+    description: "Executa um comando bash no servidor.",
     input_schema: {
       type: "object",
-      properties: {
-        command: { type: "string", description: "Comando bash a executar" },
-      },
+      properties: { command: { type: "string" } },
       required: ["command"],
     },
   },
   {
     name: "read_file",
-    description: "Lê o conteúdo de um arquivo",
+    description: "Lê o conteúdo de um arquivo.",
     input_schema: {
       type: "object",
-      properties: {
-        path: { type: "string", description: "Caminho absoluto do arquivo" },
-      },
+      properties: { path: { type: "string" } },
       required: ["path"],
     },
   },
   {
     name: "write_file",
-    description: "Escreve ou cria um arquivo com o conteúdo fornecido",
+    description: "Escreve ou cria um arquivo.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" }, content: { type: "string" } },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "create_calendar_event",
+    description: "Cria um evento no Google Calendar do usuário.",
     input_schema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Caminho absoluto do arquivo" },
-        content: { type: "string", description: "Conteúdo a escrever" },
+        summary: { type: "string", description: "Título do evento" },
+        start: { type: "string", description: "Data/hora início em ISO 8601, ex: 2026-05-03T10:00:00" },
+        end: { type: "string", description: "Data/hora fim em ISO 8601, ex: 2026-05-03T11:00:00" },
+        description: { type: "string", description: "Descrição opcional" },
+        location: { type: "string", description: "Local opcional" },
       },
-      required: ["path", "content"],
+      required: ["summary", "start", "end"],
+    },
+  },
+  {
+    name: "list_calendar_events",
+    description: "Lista os próximos eventos do Google Calendar.",
+    input_schema: {
+      type: "object",
+      properties: { maxResults: { type: "number", description: "Número máximo de eventos (padrão 10)" } },
+    },
+  },
+  {
+    name: "send_email",
+    description: "Envia um email via Gmail.",
+    input_schema: {
+      type: "object",
+      properties: {
+        to: { type: "string", description: "Endereço de destino" },
+        subject: { type: "string", description: "Assunto do email" },
+        body: { type: "string", description: "Corpo do email em texto simples" },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  {
+    name: "list_emails",
+    description: "Lista emails recentes da caixa de entrada do Gmail.",
+    input_schema: {
+      type: "object",
+      properties: {
+        maxResults: { type: "number", description: "Quantidade de emails (padrão 5)" },
+        query: { type: "string", description: "Filtro de busca, ex: 'from:joao@example.com' ou 'subject:reunião'" },
+      },
     },
   },
 ]
@@ -80,59 +197,50 @@ export async function POST(req: Request) {
     const { task } = await req.json()
     if (!task) return NextResponse.json({ error: "Task vazia" }, { status: 400 })
 
-    const messages: Anthropic.MessageParam[] = [
-      { role: "user", content: task },
-    ]
-
+    const messages: Anthropic.MessageParam[] = [{ role: "user", content: task }]
     let finalResult = ""
 
-    // Agentic loop — Claude executa tools até concluir a tarefa
     while (true) {
       const response = await client.messages.create({
         model: "claude-opus-4-7",
         max_tokens: 4096,
         system: `Você é o executor do JARVIS. Recebe tarefas e as executa usando as ferramentas disponíveis.
-Use bash para qualquer operação no sistema: criar eventos no Calendar (via osascript), enviar emails, manipular arquivos, etc.
+Você tem acesso ao Google Calendar e Gmail do usuário. Use-os para criar eventos, listar agenda, enviar emails, etc.
 Responda sempre em português. Seja direto — diga o que fez, não o que vai fazer.
-Para criar eventos no macOS Calendar use osascript. Exemplo:
-osascript -e 'tell application "Calendar" to tell calendar "Home" to make new event with properties {summary:"Reunião", start date:date "Friday, May 3, 2026 at 10:00:00 AM", end date:date "Friday, May 3, 2026 at 11:00:00 AM"}'`,
+A data/hora atual é: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.
+O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
         tools,
         messages,
       })
 
-      // Collect text from this response
       for (const block of response.content) {
-        if (block.type === "text") {
-          finalResult = block.text
-        }
+        if (block.type === "text") finalResult = block.text
       }
 
       if (response.stop_reason === "end_turn") break
 
       if (response.stop_reason === "tool_use") {
         const toolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")
-
         messages.push({ role: "assistant", content: response.content })
 
         const toolResults: Anthropic.ToolResultBlockParam[] = []
 
         for (const toolUse of toolUses) {
+          const input = toolUse.input as Record<string, any>
           let result = ""
-          const input = toolUse.input as Record<string, string>
 
-          if (toolUse.name === "bash") {
-            result = await runBash(input.command)
-          } else if (toolUse.name === "read_file") {
-            result = await readFile(input.path)
-          } else if (toolUse.name === "write_file") {
-            result = await writeFile(input.path, input.content)
+          switch (toolUse.name) {
+            case "bash": result = await runBash(input.command); break
+            case "read_file": result = await readFile(input.path); break
+            case "write_file": result = await writeFile(input.path, input.content); break
+            case "create_calendar_event": result = await createCalendarEvent(input.summary, input.start, input.end, input.description, input.location); break
+            case "list_calendar_events": result = await listCalendarEvents(input.maxResults); break
+            case "send_email": result = await sendEmail(input.to, input.subject, input.body); break
+            case "list_emails": result = await listEmails(input.maxResults, input.query); break
+            default: result = "Ferramenta desconhecida."
           }
 
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: toolUse.id,
-            content: result,
-          })
+          toolResults.push({ type: "tool_result", tool_use_id: toolUse.id, content: result })
         }
 
         messages.push({ role: "user", content: toolResults })

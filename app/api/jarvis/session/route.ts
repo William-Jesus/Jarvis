@@ -52,7 +52,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
           {
             type: "function",
             name: "ask_claude",
-            description: "Delega uma tarefa complexa para o Claude executar com autonomia total: criar eventos no Calendar, enviar emails, gerenciar arquivos, rodar scripts, interagir com qualquer app via terminal. Use sempre que a tarefa exigir mais do que abrir um app ou buscar informação.",
+            description: "Delega uma tarefa complexa para o Claude executar com autonomia total: criar/listar eventos no Google Calendar, enviar/ler emails no Gmail, gerenciar arquivos, rodar scripts. Use sempre que a tarefa exigir mais do que abrir um app ou buscar informação.",
             parameters: {
               type: "object",
               properties: {

@@ -24,7 +24,9 @@ export function middleware(request: NextRequest) {
   // Allow auth API routes and login page
   if (
     pathname.startsWith("/api/jarvis/auth") ||
+    pathname.startsWith("/api/jarvis/google-callback") ||
     pathname.startsWith("/login") ||
+    pathname.startsWith("/google-setup") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
