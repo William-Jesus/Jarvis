@@ -47,6 +47,20 @@ export async function POST(request: Request) {
       return NextResponse.json(result)
     }
 
+    if (action === "ask_claude") {
+      const task = params?.task || ""
+      if (!task) return NextResponse.json({ error: "Task vazia" }, { status: 400 })
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+      const res = await fetch(`${baseUrl}/api/jarvis/claude-agent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task }),
+      })
+      const data = await res.json()
+      return NextResponse.json({ success: true, result: data.result || data.error })
+    }
+
     if (action === "open_app") {
       const appName = params?.app?.toLowerCase() || ""
       const resolvedApp = APP_MAP[appName] || params?.app

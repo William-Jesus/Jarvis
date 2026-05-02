@@ -51,6 +51,18 @@ Você tem acesso a múltiplos computadores via agentes remotos.
         tools: [
           {
             type: "function",
+            name: "ask_claude",
+            description: "Delega uma tarefa complexa para o Claude executar com autonomia total: criar eventos no Calendar, enviar emails, gerenciar arquivos, rodar scripts, interagir com qualquer app via terminal. Use sempre que a tarefa exigir mais do que abrir um app ou buscar informação.",
+            parameters: {
+              type: "object",
+              properties: {
+                task: { type: "string", description: "Descrição completa da tarefa a executar, com todos os detalhes necessários (datas, nomes, conteúdo, etc.)" },
+              },
+              required: ["task"],
+            },
+          },
+          {
+            type: "function",
             name: "open_app",
             description: "Abre um aplicativo em um computador. Use agentId para especificar qual máquina.",
             parameters: {
