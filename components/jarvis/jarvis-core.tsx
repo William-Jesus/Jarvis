@@ -285,8 +285,8 @@ export function JarvisCore() {
   }
 
   const speakWithElevenLabs = async (text: string) => {
+    if (ttsAudioRef.current) return
     setState("speaking")
-    // Mute mic while Jarvis speaks to prevent feedback loop
     if (micTrackRef.current) micTrackRef.current.enabled = false
     try {
       const response = await fetch("/api/jarvis/speak", {
