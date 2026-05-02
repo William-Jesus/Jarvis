@@ -161,7 +161,7 @@ export function JarvisCore() {
       const res = await fetch("/api/jarvis/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: name, params: args }),
+        body: JSON.stringify({ action: name, params: args, agentId: args.agentId }),
       })
       const result = await res.json()
 

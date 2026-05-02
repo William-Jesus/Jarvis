@@ -22,19 +22,21 @@ Responda sempre em português, de forma concisa e direta.
 Trate o usuário com respeito, usando "senhor" ocasionalmente.
 Mantenha respostas curtas e objetivas, adequadas para fala.
 
-Quando o usuário pedir para executar ações em um computador específico (ex: "no Windows", "no meu PC"), use get_agents para verificar quais agentes estão conectados e passe o agentId correto nas funções de ação.`,
+Você tem acesso a múltiplos computadores via agentes remotos.
+- Sempre que o usuário mencionar um computador específico (ex: "no Windows", "no meu Mac", "no meu PC"), use get_agents PRIMEIRO para obter a lista de agentes e seus IDs.
+- Identifique o agente correto pelo campo platform (Darwin=Mac, Windows=Windows) ou hostname.
+- Passe o agentId nas funções de ação para executar no computador correto.
+- Se nenhum computador for mencionado, execute localmente (sem agentId).`,
         tools: [
           {
             type: "function",
             name: "open_app",
-            description: "Abre um aplicativo no Mac do usuário",
+            description: "Abre um aplicativo em um computador. Use agentId para especificar qual máquina.",
             parameters: {
               type: "object",
               properties: {
-                app: {
-                  type: "string",
-                  description: "Nome do aplicativo a abrir (ex: chrome, spotify, vscode, terminal)",
-                },
+                app: { type: "string", description: "Nome do aplicativo (ex: chrome, spotify, vscode)" },
+                agentId: { type: "string", description: "ID do agente/computador remoto (obtido via get_agents)" },
               },
               required: ["app"],
             },
@@ -48,11 +50,12 @@ Quando o usuário pedir para executar ações em um computador específico (ex: 
           {
             type: "function",
             name: "read_file",
-            description: "Lê o conteúdo de um arquivo no computador do usuário",
+            description: "Lê o conteúdo de um arquivo em um computador",
             parameters: {
               type: "object",
               properties: {
-                path: { type: "string", description: "Caminho completo do arquivo (ex: /Users/william/Documents/notas.txt)" },
+                path: { type: "string", description: "Caminho do arquivo" },
+                agentId: { type: "string", description: "ID do agente remoto (opcional)" },
               },
               required: ["path"],
             },
@@ -60,12 +63,13 @@ Quando o usuário pedir para executar ações em um computador específico (ex: 
           {
             type: "function",
             name: "write_file",
-            description: "Cria ou escreve conteúdo em um arquivo no computador",
+            description: "Cria ou escreve um arquivo em um computador",
             parameters: {
               type: "object",
               properties: {
-                path: { type: "string", description: "Caminho completo do arquivo" },
-                content: { type: "string", description: "Conteúdo a escrever no arquivo" },
+                path: { type: "string", description: "Caminho do arquivo" },
+                content: { type: "string", description: "Conteúdo a escrever" },
+                agentId: { type: "string", description: "ID do agente remoto (opcional)" },
               },
               required: ["path", "content"],
             },
@@ -73,22 +77,24 @@ Quando o usuário pedir para executar ações em um computador específico (ex: 
           {
             type: "function",
             name: "list_directory",
-            description: "Lista os arquivos e pastas de um diretório",
+            description: "Lista arquivos e pastas de um diretório em um computador",
             parameters: {
               type: "object",
               properties: {
-                path: { type: "string", description: "Caminho da pasta (ex: /Users/william/Downloads)" },
+                path: { type: "string", description: "Caminho da pasta" },
+                agentId: { type: "string", description: "ID do agente remoto (opcional)" },
               },
             },
           },
           {
             type: "function",
             name: "run_command",
-            description: "Executa um comando no terminal do Mac",
+            description: "Executa um comando no terminal de um computador",
             parameters: {
               type: "object",
               properties: {
-                command: { type: "string", description: "Comando a executar (ex: npm install, git status, ls -la)" },
+                command: { type: "string", description: "Comando a executar" },
+                agentId: { type: "string", description: "ID do agente remoto (opcional)" },
               },
               required: ["command"],
             },
@@ -125,14 +131,12 @@ Quando o usuário pedir para executar ações em um computador específico (ex: 
           {
             type: "function",
             name: "set_volume",
-            description: "Define o volume do Mac entre 0 e 100",
+            description: "Define o volume de um computador entre 0 e 100",
             parameters: {
               type: "object",
               properties: {
-                level: {
-                  type: "number",
-                  description: "Nível do volume de 0 a 100",
-                },
+                level: { type: "number", description: "Nível do volume de 0 a 100" },
+                agentId: { type: "string", description: "ID do agente remoto (opcional)" },
               },
               required: ["level"],
             },
@@ -140,14 +144,14 @@ Quando o usuário pedir para executar ações em um computador específico (ex: 
           {
             type: "function",
             name: "mute",
-            description: "Muta o som do Mac",
-            parameters: { type: "object", properties: {} },
+            description: "Muta o som de um computador",
+            parameters: { type: "object", properties: { agentId: { type: "string" } } },
           },
           {
             type: "function",
             name: "unmute",
-            description: "Ativa o som do Mac",
-            parameters: { type: "object", properties: {} },
+            description: "Ativa o som de um computador",
+            parameters: { type: "object", properties: { agentId: { type: "string" } } },
           },
         ],
         tool_choice: "auto",
