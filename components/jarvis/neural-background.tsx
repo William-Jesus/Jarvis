@@ -7,8 +7,6 @@ interface Node {
   y: number
   vx: number
   vy: number
-  radius: number
-  opacity: number
 }
 
 export function NeuralBackground() {
@@ -20,25 +18,25 @@ export function NeuralBackground() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const NODE_COUNT = 80
-    const MAX_DIST = 150
-    const nodes: Node[] = []
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
 
-    const resize = () => {
+    const onResize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
     }
-    resize()
-    window.addEventListener("resize", resize)
+    window.addEventListener("resize", onResize)
+
+    const NODE_COUNT = 220
+    const MAX_DIST = 130
+    const nodes: Node[] = []
 
     for (let i = 0; i < NODE_COUNT; i++) {
       nodes.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.5 + 0.5,
-        opacity: Math.random() * 0.3 + 0.1,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
       })
     }
 
@@ -50,20 +48,20 @@ export function NeuralBackground() {
       for (const node of nodes) {
         node.x += node.vx
         node.y += node.vy
+
         if (node.x < 0 || node.x > canvas.width) node.vx *= -1
         if (node.y < 0 || node.y > canvas.height) node.vy *= -1
       }
 
-      // Draw connections
+      // Connections
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[i].x - nodes[j].x
           const dy = nodes[i].y - nodes[j].y
           const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < MAX_DIST) {
-            const alpha = (1 - dist / MAX_DIST) * 0.12
             ctx.beginPath()
-            ctx.strokeStyle = `rgba(0, 200, 255, ${alpha})`
+            ctx.strokeStyle = `rgba(255,255,255,${(1 - dist / MAX_DIST) * 0.1})`
             ctx.lineWidth = 0.5
             ctx.moveTo(nodes[i].x, nodes[i].y)
             ctx.lineTo(nodes[j].x, nodes[j].y)
@@ -72,11 +70,11 @@ export function NeuralBackground() {
         }
       }
 
-      // Draw nodes
+      // Dots
       for (const node of nodes) {
         ctx.beginPath()
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(0, 200, 255, ${node.opacity})`
+        ctx.arc(node.x, node.y, 1.2, 0, Math.PI * 2)
+        ctx.fillStyle = "rgba(255,255,255,0.45)"
         ctx.fill()
       }
 
@@ -87,7 +85,7 @@ export function NeuralBackground() {
 
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener("resize", resize)
+      window.removeEventListener("resize", onResize)
     }
   }, [])
 
