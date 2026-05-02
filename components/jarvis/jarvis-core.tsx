@@ -40,6 +40,7 @@ export function JarvisCore() {
   const currentAssistantTranscriptRef = useRef("")
   const isRespondingRef = useRef(false)
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
+  const micTrackRef = useRef<MediaStreamTrack | null>(null)
 
   useEffect(() => {
     stateRef.current = state
@@ -101,6 +102,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
         if (ttsAudioRef.current) {
           ttsAudioRef.current.pause()
           ttsAudioRef.current = null
+          if (micTrackRef.current) micTrackRef.current.enabled = true
         }
         break
 
@@ -222,6 +224,8 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
 
   const speakWithElevenLabs = async (text: string) => {
     setState("speaking")
+    // Mute mic while Jarvis speaks to prevent feedback loop
+    if (micTrackRef.current) micTrackRef.current.enabled = false
     try {
       const response = await fetch("/api/jarvis/speak", {
         method: "POST",
@@ -235,20 +239,20 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       const audio = new Audio(audioUrl)
       ttsAudioRef.current = audio
 
-      audio.onended = () => {
+      const cleanup = () => {
         ttsAudioRef.current = null
         URL.revokeObjectURL(audioUrl)
+        if (micTrackRef.current) micTrackRef.current.enabled = true
         setState("listening")
       }
-      audio.onerror = () => {
-        ttsAudioRef.current = null
-        URL.revokeObjectURL(audioUrl)
-        setState("listening")
-      }
+
+      audio.onended = cleanup
+      audio.onerror = cleanup
 
       await audio.play()
     } catch {
       ttsAudioRef.current = null
+      if (micTrackRef.current) micTrackRef.current.enabled = true
       setState("listening")
     }
   }
@@ -282,7 +286,9 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       })
       setMicPermission("granted")
       const processedStream = startAudioVisualizer(stream)
-      pc.addTrack(processedStream.getTracks()[0])
+      const micTrack = processedStream.getTracks()[0]
+      micTrackRef.current = micTrack
+      pc.addTrack(micTrack)
 
       // Data channel for events
       const dc = pc.createDataChannel("oai-events")
