@@ -50,12 +50,23 @@ export function JarvisCore() {
     setMounted(true)
   }, [])
 
-  const startAudioVisualizer = (stream: MediaStream) => {
-    audioContextRef.current = new AudioContext()
-    analyserRef.current = audioContextRef.current.createAnalyser()
-    const source = audioContextRef.current.createMediaStreamSource(stream)
-    source.connect(analyserRef.current)
+  const startAudioVisualizer = (stream: MediaStream): MediaStream => {
+    const ctx = new AudioContext()
+    audioContextRef.current = ctx
+    analyserRef.current = ctx.createAnalyser()
     analyserRef.current.fftSize = 256
+
+    const source = ctx.createMediaStreamSource(stream)
+    const gain = ctx.createGain()
+    const dest = ctx.createMediaStreamDestination()
+
+    // Fade in over 500ms to skip mic warm-up / AGC calibration noise
+    gain.gain.setValueAtTime(0, ctx.currentTime)
+    gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.5)
+
+    source.connect(gain)
+    gain.connect(analyserRef.current)
+    gain.connect(dest)
 
     const loop = () => {
       if (!analyserRef.current) return
@@ -66,6 +77,8 @@ export function JarvisCore() {
       animationFrameRef.current = requestAnimationFrame(loop)
     }
     animationFrameRef.current = requestAnimationFrame(loop)
+
+    return dest.stream
   }
 
   const WAKE_TIMEOUT = 30000
@@ -280,8 +293,8 @@ export function JarvisCore() {
         },
       })
       setMicPermission("granted")
-      pc.addTrack(stream.getTracks()[0])
-      startAudioVisualizer(stream)
+      const processedStream = startAudioVisualizer(stream)
+      pc.addTrack(processedStream.getTracks()[0])
 
       // Data channel for events
       const dc = pc.createDataChannel("oai-events")
