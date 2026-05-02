@@ -4,8 +4,15 @@ import { getCredential } from "@/lib/passkey-store"
 
 const RP_ID = process.env.RP_ID || "localhost"
 const RP_NAME = "JARVIS"
+const REGISTRATION_PASSWORD = process.env.REGISTRATION_PASSWORD || ""
 
-export async function GET() {
+export async function POST(req: Request) {
+  const { password } = await req.json()
+
+  if (!password || password !== REGISTRATION_PASSWORD) {
+    return NextResponse.json({ error: "Senha incorreta" }, { status: 401 })
+  }
+
   const existing = await getCredential()
 
   const options = await generateRegistrationOptions({

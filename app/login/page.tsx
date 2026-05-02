@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
   const [registered, setRegistered] = useState<boolean | null>(null)
+  const [password, setPassword] = useState("")
 
   useEffect(() => {
     fetch("/api/jarvis/auth/check").then(r => r.json()).then(data => {
@@ -26,8 +27,15 @@ export default function LoginPage() {
 
     try {
       if (!registered) {
-        // Registration flow
-        const optRes = await fetch("/api/jarvis/auth/register-options")
+        // Registration flow — requires password
+        const optRes = await fetch("/api/jarvis/auth/register-options", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        })
+        if (optRes.status === 401) {
+          throw new Error("Senha incorreta")
+        }
         const options = await optRes.json()
         const response = await startRegistration({ optionsJSON: options })
         const verRes = await fetch("/api/jarvis/auth/register-verify", {
@@ -64,7 +72,10 @@ export default function LoginPage() {
       }
     } catch (e: any) {
       setStatus("error")
-      setMessage(e.message?.includes("cancel") ? "Cancelado." : "Falha na autenticação.")
+      const msg = e.message
+      if (msg === "Senha incorreta") setMessage("Senha incorreta.")
+      else if (msg?.includes("cancel")) setMessage("Cancelado.")
+      else setMessage("Falha na autenticação.")
       setTimeout(() => setStatus("idle"), 2000)
     }
   }
@@ -100,11 +111,27 @@ export default function LoginPage() {
           <div className="text-[10px] font-mono text-cyan-500/40 tracking-widest mt-1">v3.0 // SECURE ACCESS</div>
         </div>
 
+        {/* Password field — only on registration */}
+        {!registered && (
+          <div className="flex flex-col gap-1 w-[220px]">
+            <label className="text-[9px] font-mono text-cyan-500/50 tracking-widest uppercase">Código de acesso</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAuth()}
+              disabled={isLoading}
+              className="bg-transparent border border-cyan-500/30 rounded px-3 py-2 text-cyan-300 text-xs font-mono tracking-widest focus:outline-none focus:border-cyan-400/70 placeholder:text-cyan-500/20"
+              placeholder="••••••••••••••••••••"
+            />
+          </div>
+        )}
+
         {/* Auth button */}
         <button
           onClick={handleAuth}
-          disabled={isLoading}
-          className="relative group"
+          disabled={isLoading || (!registered && !password)}
+          className="relative group disabled:opacity-40"
         >
           {/* Outer ring */}
           <svg width="180" height="180" className="absolute inset-0">
@@ -118,7 +145,6 @@ export default function LoginPage() {
             ${status === "error" ? "border-red-400/60 bg-red-400/10" : ""}
             ${status === "idle" || isLoading ? "border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-400/70" : ""}
           `}>
-            {/* Biometric icon */}
             <svg width="52" height="52" viewBox="0 0 52 52" className={`transition-all duration-300 ${isLoading ? "animate-pulse" : "group-hover:scale-110"}`}>
               {status === "success" ? (
                 <path d="M10,26 L22,38 L42,16" fill="none" stroke="#00ff88" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -153,7 +179,7 @@ export default function LoginPage() {
           )}
           {!message && (
             <p className="text-[10px] font-mono text-cyan-500/40 tracking-widest">
-              {registered ? "USE FACE ID OU DIGITAL" : "CADASTRE SUA BIOMETRIA"}
+              {registered ? "USE FACE ID OU DIGITAL" : "INSIRA O CÓDIGO E REGISTRE"}
             </p>
           )}
         </div>
