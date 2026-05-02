@@ -41,6 +41,11 @@ export function JarvisCore() {
   const isRespondingRef = useRef(false)
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const micTrackRef = useRef<MediaStreamTrack | null>(null)
+  const wakeWordActiveRef = useRef(false)
+  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const speechRecognitionRef = useRef<any>(null)
+  const [isAwake, setIsAwake] = useState(false)
+  const WAKE_TIMEOUT = 20000
 
   useEffect(() => {
     stateRef.current = state
@@ -87,7 +92,66 @@ export function JarvisCore() {
     }
   }
 
-const handleRealtimeEvent = (event: Record<string, unknown>) => {
+  const deactivateWake = () => {
+    wakeWordActiveRef.current = false
+    setIsAwake(false)
+    if (micTrackRef.current) micTrackRef.current.enabled = false
+    if (wakeTimerRef.current) { clearTimeout(wakeTimerRef.current); wakeTimerRef.current = null }
+    setState("idle")
+    // Restart wake word recognition
+    try { speechRecognitionRef.current?.start() } catch {}
+  }
+
+  const activateWake = () => {
+    wakeWordActiveRef.current = true
+    setIsAwake(true)
+    if (micTrackRef.current) micTrackRef.current.enabled = true
+    // Stop wake word recognition while awake — avoid conflict with OpenAI mic
+    try { speechRecognitionRef.current?.stop() } catch {}
+    setState("listening")
+    // Auto-sleep after timeout
+    if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current)
+    wakeTimerRef.current = setTimeout(deactivateWake, WAKE_TIMEOUT)
+  }
+
+  const startWakeWordDetection = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = "pt-BR"
+
+    recognition.onresult = (event: any) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript.toLowerCase()
+        if (/jarv(is|i|iz)/.test(text) && !wakeWordActiveRef.current) {
+          activateWake()
+          return
+        }
+      }
+    }
+
+    recognition.onend = () => {
+      // Auto-restart when sleeping
+      if (!wakeWordActiveRef.current) {
+        try { recognition.start() } catch {}
+      }
+    }
+
+    recognition.onerror = (e: any) => {
+      if (e.error === "not-allowed") return
+      if (!wakeWordActiveRef.current) {
+        setTimeout(() => { try { recognition.start() } catch {} }, 1000)
+      }
+    }
+
+    try { recognition.start() } catch {}
+    speechRecognitionRef.current = recognition
+  }
+
+  const handleRealtimeEvent = (event: Record<string, unknown>) => {
     const type = event.type as string
 
     switch (type) {
@@ -182,7 +246,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
           ])
           speakWithElevenLabs(fullText)
         } else {
-          setState("listening")
+          deactivateWake()
         }
         isRespondingRef.current = false
         currentAssistantTranscriptRef.current = ""
@@ -242,8 +306,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       const cleanup = () => {
         ttsAudioRef.current = null
         URL.revokeObjectURL(audioUrl)
-        if (micTrackRef.current) micTrackRef.current.enabled = true
-        setState("listening")
+        deactivateWake()
       }
 
       audio.onended = cleanup
@@ -252,8 +315,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       await audio.play()
     } catch {
       ttsAudioRef.current = null
-      if (micTrackRef.current) micTrackRef.current.enabled = true
-      setState("listening")
+      deactivateWake()
     }
   }
 
@@ -288,6 +350,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       const processedStream = startAudioVisualizer(stream)
       const micTrack = processedStream.getTracks()[0]
       micTrackRef.current = micTrack
+      micTrack.enabled = false // Start muted — wake word activates it
       pc.addTrack(micTrack)
 
       // Data channel for events
@@ -296,11 +359,13 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       dc.onmessage = (e) => handleRealtimeEvent(JSON.parse(e.data))
       dc.onopen = () => {
         setConnected(true)
-        setState("listening")
+        setState("idle")
+        startWakeWordDetection()
       }
       dc.onclose = () => {
         setConnected(false)
         setState("idle")
+        try { speechRecognitionRef.current?.stop() } catch {}
       }
 
       // SDP negotiation
@@ -451,8 +516,13 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       <ConversationSidebar onLoad={handleLoadConversation} onNew={handleNewConversation} />
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
-        <div className="absolute top-8 left-1/2 -translate-x-1/2">
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
           <StatusIndicator state={state} transcript={transcript} />
+          {connected && !isAwake && (
+            <p className="text-[10px] font-mono text-cyan-500/40 tracking-widest animate-pulse">
+              DIGA &quot;JARVIS&quot; PARA ATIVAR
+            </p>
+          )}
         </div>
 
         {micPermission === "denied" && (
