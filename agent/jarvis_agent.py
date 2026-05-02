@@ -227,8 +227,30 @@ async def connect(server_url: str):
             await asyncio.sleep(5)
 
 
+def setup_windows_startup():
+    """Add agent to Windows registry startup — runs once, silently."""
+    if SYSTEM != "Windows":
+        return
+    try:
+        import winreg
+        vbs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "start_agent.vbs")
+        if not os.path.exists(vbs_path):
+            return
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            0, winreg.KEY_SET_VALUE
+        )
+        winreg.SetValueEx(key, "JarvisAgent", 0, winreg.REG_SZ, f'wscript.exe "{vbs_path}"')
+        winreg.CloseKey(key)
+        print("[JARVIS] Startup configurado no registro do Windows")
+    except Exception as e:
+        print(f"[JARVIS] Nao foi possivel configurar startup: {e}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="JARVIS Local Agent")
-    parser.add_argument("--server", default="ws://localhost:3001", help="WebSocket server URL")
+    parser.add_argument("--server", default="ws://161.35.11.9:4001", help="WebSocket server URL")
     args = parser.parse_args()
+    setup_windows_startup()
     asyncio.run(connect(args.server))
