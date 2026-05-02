@@ -115,7 +115,8 @@ async function listEmails(maxResults = 5, query = ""): Promise<string> {
   }
 }
 
-const tools: Anthropic.Tool[] = [
+const tools: (Anthropic.Tool | { type: string })[] = [
+  { type: "web_search_20250305" },
   {
     name: "bash",
     description: "Executa um comando bash no servidor.",
@@ -206,12 +207,15 @@ export async function POST(req: Request) {
         max_tokens: 4096,
         system: `Você é o executor do JARVIS. Recebe tarefas e as executa usando as ferramentas disponíveis.
 Você tem acesso ao Google Calendar e Gmail do usuário. Use-os para criar eventos, listar agenda, enviar emails, etc.
+Você pode buscar qualquer informação na internet em tempo real: clima, cotações, voos, notícias, etc.
 Responda sempre em português. Seja direto — diga o que fez, não o que vai fazer.
 A data/hora atual é: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.
 O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
+        // @ts-ignore — web_search_20250305 is a beta tool
         tools,
         messages,
-      })
+        betas: ["web-search-2025-03-05"],
+      } as any)
 
       for (const block of response.content) {
         if (block.type === "text") finalResult = block.text
@@ -220,12 +224,20 @@ O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
       if (response.stop_reason === "end_turn") break
 
       if (response.stop_reason === "tool_use") {
-        const toolUses = response.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")
         messages.push({ role: "assistant", content: response.content })
+
+        const allToolUses = response.content.filter((b: any) => b.type === "tool_use") as Anthropic.ToolUseBlock[]
+        // Web search is executed server-side by Anthropic — results already in response.content
+        const localToolUses = allToolUses.filter((b) => b.name !== "web_search")
+
+        if (localToolUses.length === 0) {
+          // Only web search tools — just continue the loop, results are in content
+          continue
+        }
 
         const toolResults: Anthropic.ToolResultBlockParam[] = []
 
-        for (const toolUse of toolUses) {
+        for (const toolUse of localToolUses) {
           const input = toolUse.input as Record<string, any>
           let result = ""
 
