@@ -13,6 +13,12 @@ import subprocess
 import sys
 import argparse
 
+# pythonw.exe has no console — redirect stdout/stderr to avoid crashes
+if sys.stdout is None:
+    sys.stdout = open(os.path.join(os.path.expanduser("~"), "jarvis_agent.log"), "a", buffering=1)
+if sys.stderr is None:
+    sys.stderr = sys.stdout
+
 try:
     import websockets
 except ImportError:
