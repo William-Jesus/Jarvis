@@ -202,20 +202,19 @@ export async function POST(req: Request) {
     let finalResult = ""
 
     while (true) {
-      const response = await client.messages.create({
+      const response = await client.beta.messages.create({
         model: "claude-opus-4-7",
         max_tokens: 4096,
+        betas: ["web-search-2025-03-05"],
         system: `Você é o executor do JARVIS. Recebe tarefas e as executa usando as ferramentas disponíveis.
 Você tem acesso ao Google Calendar e Gmail do usuário. Use-os para criar eventos, listar agenda, enviar emails, etc.
 Você pode buscar qualquer informação na internet em tempo real: clima, cotações, voos, notícias, etc.
 Responda sempre em português. Seja direto — diga o que fez, não o que vai fazer.
 A data/hora atual é: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.
 O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
-        // @ts-ignore — web_search_20250305 is a beta tool
-        tools,
+        tools: tools as any,
         messages,
-        betas: ["web-search-2025-03-05"],
-      } as any)
+      })
 
       for (const block of response.content) {
         if (block.type === "text") finalResult = block.text
