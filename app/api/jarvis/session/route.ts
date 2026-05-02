@@ -84,6 +84,12 @@ Você tem acesso a múltiplos computadores via agentes remotos.
           },
           {
             type: "function",
+            name: "wake_windows",
+            description: "Liga o PC Windows via Wake-on-LAN. Use quando o usuário pedir para ligar o Windows/PC.",
+            parameters: { type: "object", properties: {} },
+          },
+          {
+            type: "function",
             name: "read_file",
             description: "Lê o conteúdo de um arquivo em um computador",
             parameters: {

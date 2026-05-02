@@ -50,6 +50,23 @@ export async function POST(request: Request) {
       return NextResponse.json(result)
     }
 
+    if (action === "wake_windows") {
+      // Send Wake-on-LAN magic packet via Mac agent (same local network as Windows)
+      const MAC = (process.env.WINDOWS_MAC_ADDRESS || "9C-6B-00-19-93-CF").replace(/-/g, ":")
+      const wolScript = `python3 -c "
+import socket, struct
+mac = '${MAC}'.replace(':','').replace('-','')
+magic = bytes.fromhex('FF'*6 + mac*16)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+s.sendto(magic, ('255.255.255.255', 9))
+s.close()
+print('Magic packet enviado para ${MAC}')
+"`
+      await execAsync(wolScript)
+      return NextResponse.json({ success: true, result: "Magic packet enviado. O Windows deve ligar em alguns segundos." })
+    }
+
     if (action === "ask_claude") {
       const task = params?.task || ""
       if (!task) return NextResponse.json({ error: "Task vazia" }, { status: 400 })
