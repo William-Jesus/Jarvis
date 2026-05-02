@@ -6,6 +6,7 @@ const wss = new WebSocketServer({ port: PORT })
 
 const agents = new Map()
 const pending = new Map()
+const agentStats = new Map()
 
 wss.on("connection", (ws) => {
   const agentId = uuidv4()
@@ -24,6 +25,11 @@ wss.on("connection", (ws) => {
         })
         ws.send(JSON.stringify({ type: "registered", agentId }))
         console.log(`[agent] Connected: ${agentId} (${msg.platform} - ${msg.hostname})`)
+        return
+      }
+
+      if (msg.type === "stats") {
+        agentStats.set(agentId, { ...msg.stats, updatedAt: new Date() })
         return
       }
 
@@ -68,6 +74,7 @@ const httpServer = http.createServer((req, res) => {
   if (req.method === "GET" && req.url === "/agents") {
     const list = Array.from(agents.values()).map(({ id, platform, hostname, connectedAt }) => ({
       id, platform, hostname, connectedAt,
+      stats: agentStats.get(id) || null,
     }))
     res.end(JSON.stringify({ agents: list }))
     return

@@ -18,6 +18,13 @@ try:
 except ImportError:
     print("Installing websockets...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "websockets"])
+
+try:
+    import psutil
+except ImportError:
+    print("Installing psutil...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "psutil"])
+    import psutil
     import websockets
 
 SYSTEM = platform.system()  # Darwin, Windows, Linux
@@ -141,6 +148,42 @@ def handle_action(action: str, params: dict) -> dict:
         return {"error": str(e)}
 
 
+def get_system_stats() -> dict:
+    cpu = psutil.cpu_percent(interval=None)
+    mem = psutil.virtual_memory()
+    disk = psutil.disk_usage("/")
+    temps = {}
+    try:
+        t = psutil.sensors_temperatures()
+        if t:
+            for name, entries in t.items():
+                if entries:
+                    temps["cpu"] = round(entries[0].current, 1)
+                    break
+    except Exception:
+        pass
+    return {
+        "cpu": round(cpu, 1),
+        "memory": round(mem.percent, 1),
+        "disk": round(disk.percent, 1),
+        "memory_total": round(mem.total / (1024**3), 1),
+        "memory_used": round(mem.used / (1024**3), 1),
+        "temp": temps.get("cpu"),
+        "platform": SYSTEM,
+        "hostname": socket.gethostname(),
+    }
+
+
+async def send_stats_loop(ws):
+    while True:
+        try:
+            stats = get_system_stats()
+            await ws.send(json.dumps({"type": "stats", "stats": stats}))
+        except Exception:
+            break
+        await asyncio.sleep(5)
+
+
 async def connect(server_url: str):
     print(f"🤖 JARVIS Agent ({SYSTEM}) conectando em {server_url}...")
 
@@ -156,6 +199,8 @@ async def connect(server_url: str):
                 msg = json.loads(await ws.recv())
                 agent_id = msg.get("agentId", "unknown")
                 print(f"✅ Conectado! ID: {agent_id}")
+
+                asyncio.create_task(send_stats_loop(ws))
 
                 async for message in ws:
                     data = json.loads(message)

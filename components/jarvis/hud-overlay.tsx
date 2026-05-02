@@ -16,6 +16,20 @@ export function HudOverlay({ state }: HudOverlayProps) {
   const [power, setPower] = useState(87)
   const [temp, setTemp] = useState(36)
   const [scanY, setScanY] = useState(0)
+  const [remoteAgents, setRemoteAgents] = useState<Array<{id: string, platform: string, hostname: string, stats: Record<string, number> | null}>>([])
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const res = await fetch("/api/jarvis/agent")
+        const data = await res.json()
+        setRemoteAgents(data.agents || [])
+      } catch {}
+    }
+    fetchAgents()
+    const interval = setInterval(fetchAgents, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -144,6 +158,35 @@ export function HudOverlay({ state }: HudOverlayProps) {
             ))}
           </div>
         </div>
+
+        {/* Remote agents panels */}
+        {remoteAgents.filter(a => a.stats).map((agent) => (
+          <div key={agent.id} className="rounded border border-cyan-500/20 bg-black/40 backdrop-blur-sm p-3 w-44">
+            <div className="text-[9px] font-mono text-cyan-500/60 mb-1 tracking-widest">
+              {agent.platform === "Windows" ? "⬛ WINDOWS" : "🍎 MAC"}
+            </div>
+            <div className="text-[9px] font-mono text-cyan-400 mb-2 truncate">{agent.hostname}</div>
+            <div className="space-y-1.5">
+              {[
+                ["CPU", agent.stats?.cpu, "#00ffff"],
+                ["MEM", agent.stats?.memory, "#00ff88"],
+                ["DSK", agent.stats?.disk, "#ffa500"],
+              ].map(([label, val, color]) => (
+                <div key={label as string} className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono text-cyan-500/50 w-7">{label}</span>
+                  <div className="flex-1 h-px bg-cyan-900/50 overflow-hidden">
+                    <div className="h-full transition-all duration-700" style={{ width: `${val}%`, background: color as string }} />
+                  </div>
+                  <span className="text-[9px] font-mono w-7 text-right" style={{ color: color as string }}>{val}%</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mt-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[9px] font-mono text-green-400">CONNECTED</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Top center - state indicator line */}
