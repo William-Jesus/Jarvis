@@ -54,7 +54,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
           {
             type: "function",
             name: "ask_claude",
-            description: "Delega tarefas para o Claude executar com autonomia total. Use para: clima/temperatura/previsão do tempo, cotação de moeda/dólar/euro, preço de voos/passagens, notícias atuais, resultados esportivos, qualquer pesquisa na internet, Google Calendar (criar/listar eventos), Gmail (enviar/ler emails), gerenciar arquivos, rodar scripts. Sempre que precisar de informação em tempo real, use esta função.",
+            description: "Delega tarefas para o Claude executar com autonomia total. Use para: clima/temperatura/previsão do tempo, cotação de moeda/dólar/euro, preço de voos/passagens, notícias atuais, resultados esportivos, qualquer pesquisa na internet, navegar em sites e extrair informações, preencher formulários, interagir com páginas web, Google Calendar (criar/listar eventos), Gmail (enviar/ler emails), gerenciar arquivos, rodar scripts. Sempre que precisar de informação em tempo real ou interação com sites, use esta função.",
             parameters: {
               type: "object",
               properties: {

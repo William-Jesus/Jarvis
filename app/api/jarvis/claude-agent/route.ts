@@ -5,9 +5,83 @@ import { promisify } from "util"
 import fs from "fs/promises"
 import { getAuthenticatedClient } from "@/lib/google-client"
 import { google } from "googleapis"
+import { chromium, Browser, Page } from "playwright"
 
 const execAsync = promisify(exec)
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+let browser: Browser | null = null
+let page: Page | null = null
+
+async function getBrowserPage(): Promise<Page> {
+  if (!browser || !browser.isConnected()) {
+    browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    })
+  }
+  if (!page || page.isClosed()) {
+    page = await browser.newPage()
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.setExtraHTTPHeaders({ "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8" })
+  }
+  return page
+}
+
+async function browserAction(action: string, params: Record<string, any>): Promise<string> {
+  try {
+    switch (action) {
+      case "navigate": {
+        const p = await getBrowserPage()
+        await p.goto(params.url, { waitUntil: "domcontentloaded", timeout: 30000 })
+        const title = await p.title()
+        const url = p.url()
+        return `Página aberta: ${title}\nURL: ${url}`
+      }
+      case "click": {
+        const p = await getBrowserPage()
+        await p.click(params.selector, { timeout: 10000 })
+        await p.waitForTimeout(1500)
+        return `Clicou em: ${params.selector}`
+      }
+      case "type": {
+        const p = await getBrowserPage()
+        await p.fill(params.selector, params.text)
+        return `Digitou em ${params.selector}: "${params.text}"`
+      }
+      case "press": {
+        const p = await getBrowserPage()
+        await p.keyboard.press(params.key)
+        await p.waitForTimeout(1500)
+        return `Tecla pressionada: ${params.key}`
+      }
+      case "extract": {
+        const p = await getBrowserPage()
+        if (params.selector) {
+          const el = await p.$(params.selector)
+          const text = await el?.innerText()
+          return text?.slice(0, 8000) || "Elemento não encontrado"
+        }
+        const text = await p.evaluate(() => document.body.innerText)
+        return text.slice(0, 8000)
+      }
+      case "wait_for": {
+        const p = await getBrowserPage()
+        await p.waitForSelector(params.selector, { timeout: 15000 })
+        return `Elemento encontrado: ${params.selector}`
+      }
+      case "close": {
+        await page?.close()
+        page = null
+        return "Aba fechada"
+      }
+      default:
+        return "Ação desconhecida. Use: navigate, click, type, press, extract, wait_for, close"
+    }
+  } catch (e: any) {
+    return `Erro no navegador: ${e.message}`
+  }
+}
 
 const BLOCKED_COMMANDS = ["rm -rf", "sudo rm", "mkfs", "dd if=", ":(){", "chmod 777 /"]
 
@@ -118,6 +192,25 @@ async function listEmails(maxResults = 5, query = ""): Promise<string> {
 const tools: any[] = [
   { type: "web_search_20250305", name: "web_search" },
   {
+    name: "browser",
+    description: "Controla um navegador real (Chromium) para abrir sites, clicar em elementos, preencher formulários e extrair informações. Use para tarefas que requerem interação com páginas web.",
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["navigate", "click", "type", "press", "extract", "wait_for", "close"],
+          description: "navigate: abre URL | click: clica em elemento | type: digita em campo | press: pressiona tecla (Enter, Tab, etc) | extract: extrai texto da página ou elemento | wait_for: aguarda elemento aparecer | close: fecha aba",
+        },
+        url: { type: "string", description: "URL para navegar (apenas para action=navigate)" },
+        selector: { type: "string", description: "Seletor CSS ou 'text=Texto visível' para identificar elemento" },
+        text: { type: "string", description: "Texto para digitar (apenas para action=type)" },
+        key: { type: "string", description: "Tecla a pressionar, ex: Enter, Tab, Escape (apenas para action=press)" },
+      },
+      required: ["action"],
+    },
+  },
+  {
     name: "bash",
     description: "Executa um comando bash no servidor.",
     input_schema: {
@@ -208,6 +301,7 @@ export async function POST(req: Request) {
         system: `Você é o executor do JARVIS. Recebe tarefas e as executa usando as ferramentas disponíveis.
 Você tem acesso ao Google Calendar e Gmail do usuário. Use-os para criar eventos, listar agenda, enviar emails, etc.
 Você pode buscar qualquer informação na internet em tempo real: clima, cotações, voos, notícias, etc.
+Você controla um navegador real (Chromium) via ferramenta browser. Use-o para abrir sites, interagir com páginas, preencher formulários e extrair dados quando necessário.
 Responda sempre em português. Seja direto — diga o que fez, não o que vai fazer.
 A data/hora atual é: ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.
 O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
@@ -247,6 +341,7 @@ O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
             case "list_calendar_events": result = await listCalendarEvents(input.maxResults); break
             case "send_email": result = await sendEmail(input.to, input.subject, input.body); break
             case "list_emails": result = await listEmails(input.maxResults, input.query); break
+            case "browser": result = await browserAction(input.action, input); break
             default: result = "Ferramenta desconhecida."
           }
 
