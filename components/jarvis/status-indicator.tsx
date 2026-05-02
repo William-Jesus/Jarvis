@@ -21,18 +21,18 @@ export function StatusIndicator({ state, transcript }: StatusIndicatorProps) {
   const Icon = config.icon
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Status badge */}
+    <div className="flex flex-col items-center gap-2">
+      {/* Status badge with inline transcript */}
       <div
         className={cn(
-          "glass-panel flex items-center gap-3 rounded-full px-6 py-3 transition-all duration-300",
+          "glass-panel flex items-center gap-3 rounded-full px-5 py-2 transition-all duration-300 max-w-sm",
           state === "listening" && "animate-pulse-glow",
           state === "thinking" && "border-primary/50"
         )}
       >
         <div
           className={cn(
-            "flex h-3 w-3 items-center justify-center rounded-full",
+            "flex h-2.5 w-2.5 shrink-0 rounded-full",
             state === "idle" && "bg-muted-foreground",
             state === "listening" && "bg-green-400 animate-pulse",
             state === "thinking" && "bg-primary animate-pulse",
@@ -41,28 +41,29 @@ export function StatusIndicator({ state, transcript }: StatusIndicatorProps) {
         />
         <Icon
           className={cn(
-            "h-5 w-5 transition-colors",
+            "h-4 w-4 shrink-0 transition-colors",
             state === "idle" && "text-muted-foreground",
             state !== "idle" && "text-primary"
           )}
         />
         <span
           className={cn(
-            "text-sm font-medium tracking-wider uppercase",
+            "text-xs font-medium tracking-wider uppercase shrink-0",
             state === "idle" && "text-muted-foreground",
             state !== "idle" && "text-primary jarvis-text-glow"
           )}
         >
           {config.label}
         </span>
+        {transcript && (
+          <>
+            <span className="text-primary/30 shrink-0">|</span>
+            <span className="text-xs text-primary/70 italic truncate max-w-[180px]">
+              {transcript}
+            </span>
+          </>
+        )}
       </div>
-
-      {/* Transcript display */}
-      {transcript && state === "listening" && (
-        <div className="glass-panel max-w-md rounded-lg px-4 py-2 animate-fade-in-up">
-          <p className="text-sm text-primary/80 italic">"{transcript}"</p>
-        </div>
-      )}
     </div>
   )
 }

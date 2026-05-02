@@ -485,7 +485,7 @@ export function JarvisCore() {
 
         <div className="absolute bottom-0 left-0 right-0 flex flex-col">
           <ConversationPanel messages={messages} />
-          <form onSubmit={handleTextSubmit} className="p-4 bg-background/80 backdrop-blur-sm border-t border-border">
+          <form onSubmit={handleTextSubmit} className="p-2 bg-background/80 backdrop-blur-sm border-t border-border">
             <div className="max-w-2xl mx-auto flex gap-3">
               <input
                 type="text"
@@ -493,12 +493,12 @@ export function JarvisCore() {
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder={connected ? "Fale ou digite uma mensagem..." : "Conectando..."}
                 disabled={!connected || state === "thinking" || state === "speaking"}
-                className="flex-1 px-4 py-3 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
                 disabled={!textInput.trim() || !connected}
-                className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Enviar
               </button>

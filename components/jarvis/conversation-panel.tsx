@@ -36,36 +36,36 @@ export function ConversationPanel({ messages }: ConversationPanelProps) {
   }
 
   return (
-    <div className="glass-panel mx-auto max-w-2xl rounded-t-2xl">
+    <div className="glass-panel mx-auto max-w-2xl rounded-t-xl">
       <div
         ref={scrollRef}
-        className="max-h-[30vh] overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary/20"
+        className="max-h-[18vh] overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary/20"
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {messages.map((message, index) => (
             <div
               key={message.id}
               className={cn(
-                "flex gap-3 animate-fade-in-up",
+                "flex gap-2 animate-fade-in-up",
                 message.role === "user" ? "justify-end" : "justify-start"
               )}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               {message.role === "assistant" && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
-                  <Bot className="h-4 w-4 text-primary" />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
+                  <Bot className="h-3 w-3 text-primary" />
                 </div>
               )}
 
               <div
                 className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-3",
+                  "max-w-[80%] rounded-xl px-3 py-2",
                   message.role === "user"
                     ? "bg-primary/20 border border-primary/30 text-primary"
                     : "bg-secondary/50 border border-border text-foreground"
                 )}
               >
-                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className="text-xs leading-relaxed">{message.content}</p>
 
                 {/* Search results */}
                 {message.searchResults && message.searchResults.length > 0 && (
@@ -97,7 +97,7 @@ export function ConversationPanel({ messages }: ConversationPanelProps) {
                   </div>
                 )}
 
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-1 text-[10px] text-muted-foreground">
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -106,8 +106,8 @@ export function ConversationPanel({ messages }: ConversationPanelProps) {
               </div>
 
               {message.role === "user" && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
-                  <User className="h-4 w-4 text-primary" />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
+                  <User className="h-3 w-3 text-primary" />
                 </div>
               )}
             </div>
