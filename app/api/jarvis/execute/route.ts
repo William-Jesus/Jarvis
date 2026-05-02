@@ -5,6 +5,9 @@ import fs from "fs/promises"
 import path from "path"
 const execAsync = promisify(exec)
 
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "jarvis-internal-secret-key"
+const internalHeaders = { "Content-Type": "application/json", "x-internal-secret": INTERNAL_SECRET }
+
 const BLOCKED_COMMANDS = ["rm -rf", "sudo", "mkfs", "dd if=", ":(){", "chmod 777 /"]
 
 const REMOTE_ACTIONS = ["open_app", "set_volume", "mute", "unmute", "read_file", "write_file", "list_directory", "run_command"]
@@ -54,7 +57,7 @@ export async function POST(request: Request) {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
       const res = await fetch(`${baseUrl}/api/jarvis/claude-agent`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: internalHeaders,
         body: JSON.stringify({ task }),
       })
       const data = await res.json()
@@ -87,7 +90,7 @@ export async function POST(request: Request) {
       const topic = params?.topic || ""
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/jarvis/news`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: internalHeaders,
         body: JSON.stringify({ topic }),
       })
       const data = await res.json()
@@ -100,7 +103,7 @@ export async function POST(request: Request) {
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/jarvis/search`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: internalHeaders,
         body: JSON.stringify({ query }),
       })
       const data = await res.json()

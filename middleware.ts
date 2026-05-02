@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 
 const SESSION_COOKIE = "jarvis_session"
 const SESSION_SECRET = process.env.SESSION_SECRET || "jarvis-secret-change-in-production-32chars"
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "jarvis-internal-secret-key"
 const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000
 
 function isValidSession(token: string): boolean {
@@ -20,6 +21,12 @@ function isValidSession(token: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Allow internal server-to-server calls
+  const internalSecret = request.headers.get("x-internal-secret")
+  if (internalSecret && internalSecret === INTERNAL_SECRET) {
+    return NextResponse.next()
+  }
 
   // Allow auth API routes and login page
   if (
