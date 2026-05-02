@@ -160,6 +160,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
           threshold: 0.5,
           silence_duration_ms: 600,
           prefix_padding_ms: 300,
+          create_response: false,
         },
         input_audio_transcription: {
           model: "whisper-1",

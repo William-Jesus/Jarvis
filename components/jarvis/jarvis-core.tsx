@@ -108,13 +108,18 @@ export function JarvisCore() {
         if (!isAwakeRef.current) {
           if (isWakeWord(text)) {
             activateWake()
+            if (dcRef.current?.readyState === "open") {
+              dcRef.current.send(JSON.stringify({ type: "response.create" }))
+            }
           } else {
-            cancelResponse()
             setState("listening")
             break
           }
         } else {
-          activateWake() // reset timer on every interaction
+          activateWake()
+          if (dcRef.current?.readyState === "open") {
+            dcRef.current.send(JSON.stringify({ type: "response.create" }))
+          }
         }
 
         if (text.trim()) {
