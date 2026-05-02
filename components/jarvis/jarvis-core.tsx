@@ -45,7 +45,9 @@ export function JarvisCore() {
   const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const speechRecognitionRef = useRef<any>(null)
   const [isAwake, setIsAwake] = useState(false)
+  const [isFollowUp, setIsFollowUp] = useState(false)
   const WAKE_TIMEOUT = 20000
+  const FOLLOWUP_TIMEOUT = 8000
 
   useEffect(() => {
     stateRef.current = state
@@ -95,10 +97,10 @@ export function JarvisCore() {
   const deactivateWake = () => {
     wakeWordActiveRef.current = false
     setIsAwake(false)
+    setIsFollowUp(false)
     if (micTrackRef.current) micTrackRef.current.enabled = false
     if (wakeTimerRef.current) { clearTimeout(wakeTimerRef.current); wakeTimerRef.current = null }
     setState("idle")
-    // Restart wake word recognition
     try { speechRecognitionRef.current?.start() } catch {}
   }
 
@@ -313,7 +315,15 @@ export function JarvisCore() {
       const cleanup = () => {
         ttsAudioRef.current = null
         URL.revokeObjectURL(audioUrl)
-        deactivateWake()
+        // Follow-up window: keep mic active for 8s so user can respond naturally
+        if (micTrackRef.current) micTrackRef.current.enabled = true
+        setState("listening")
+        setIsFollowUp(true)
+        if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current)
+        wakeTimerRef.current = setTimeout(() => {
+          setIsFollowUp(false)
+          deactivateWake()
+        }, FOLLOWUP_TIMEOUT)
       }
 
       audio.onended = cleanup
@@ -528,6 +538,11 @@ export function JarvisCore() {
           {connected && !isAwake && (
             <p className="text-[10px] font-mono text-cyan-500/40 tracking-widest animate-pulse">
               DIGA &quot;JARVIS&quot; PARA ATIVAR
+            </p>
+          )}
+          {connected && isFollowUp && (
+            <p className="text-[10px] font-mono text-cyan-400/60 tracking-widest animate-pulse">
+              PODE CONTINUAR...
             </p>
           )}
         </div>
