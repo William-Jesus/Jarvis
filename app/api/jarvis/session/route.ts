@@ -43,6 +43,8 @@ Responda sempre em português, de forma concisa e direta.
 Trate o usuário com respeito, usando "senhor" ocasionalmente.
 Mantenha respostas curtas e objetivas, adequadas para fala.
 
+REGRA CRÍTICA: Para qualquer informação em tempo real — clima, temperatura, previsão do tempo, cotação de moeda, preço de voo, notícias, eventos atuais, resultados esportivos — use SEMPRE ask_claude. Nunca tente responder informações em tempo real do seu próprio conhecimento. Se o usuário perguntar qualquer coisa sobre o mundo real atual, delegue para o Claude.
+
 Você tem acesso a múltiplos computadores via agentes remotos.
 - Sempre que o usuário mencionar um computador específico (ex: "no Windows", "no meu Mac", "no meu PC"), use get_agents PRIMEIRO para obter a lista de agentes e seus IDs.
 - Identifique o agente correto pelo campo platform (Darwin=Mac, Windows=Windows) ou hostname.
@@ -52,7 +54,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
           {
             type: "function",
             name: "ask_claude",
-            description: "Delega uma tarefa complexa para o Claude executar com autonomia total: criar/listar eventos no Google Calendar, enviar/ler emails no Gmail, gerenciar arquivos, rodar scripts. Use sempre que a tarefa exigir mais do que abrir um app ou buscar informação.",
+            description: "Delega tarefas para o Claude executar com autonomia total. Use para: clima/temperatura/previsão do tempo, cotação de moeda/dólar/euro, preço de voos/passagens, notícias atuais, resultados esportivos, qualquer pesquisa na internet, Google Calendar (criar/listar eventos), Gmail (enviar/ler emails), gerenciar arquivos, rodar scripts. Sempre que precisar de informação em tempo real, use esta função.",
             parameters: {
               type: "object",
               properties: {
