@@ -37,6 +37,9 @@ export function JarvisCore() {
   const stateRef = useRef<JarvisState>("idle")
   const currentUserTranscriptRef = useRef("")
   const currentAssistantTranscriptRef = useRef("")
+  const isAwakeRef = useRef(false)
+  const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isAwake, setIsAwake] = useState(false)
 
   useEffect(() => {
     stateRef.current = state
@@ -64,6 +67,26 @@ export function JarvisCore() {
     animationFrameRef.current = requestAnimationFrame(loop)
   }
 
+  const WAKE_TIMEOUT = 30000
+
+  const activateWake = () => {
+    isAwakeRef.current = true
+    setIsAwake(true)
+    if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current)
+    wakeTimerRef.current = setTimeout(() => {
+      isAwakeRef.current = false
+      setIsAwake(false)
+    }, WAKE_TIMEOUT)
+  }
+
+  const cancelResponse = () => {
+    if (dcRef.current?.readyState === "open") {
+      dcRef.current.send(JSON.stringify({ type: "response.cancel" }))
+    }
+  }
+
+  const isWakeWord = (text: string) => /\b(jarvis)\b/i.test(text)
+
   const handleRealtimeEvent = (event: Record<string, unknown>) => {
     const type = event.type as string
 
@@ -81,6 +104,19 @@ export function JarvisCore() {
         const text = (event.transcript as string) || ""
         currentUserTranscriptRef.current = text
         setTranscript(text)
+
+        if (!isAwakeRef.current) {
+          if (isWakeWord(text)) {
+            activateWake()
+          } else {
+            cancelResponse()
+            setState("listening")
+            break
+          }
+        } else {
+          activateWake() // reset timer on every interaction
+        }
+
         if (text.trim()) {
           setMessages((prev) => [
             ...prev,
@@ -408,6 +444,12 @@ export function JarvisCore() {
         {!connected && micPermission !== "denied" && (
           <div className="absolute top-24 left-1/2 -translate-x-1/2 text-sm text-muted-foreground animate-pulse">
             Conectando ao JARVIS...
+          </div>
+        )}
+
+        {connected && !isAwake && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 text-sm text-muted-foreground animate-pulse">
+            Diga <span className="text-primary font-semibold">Jarvis</span> para ativar
           </div>
         )}
 
