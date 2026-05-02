@@ -337,6 +337,17 @@ export function JarvisCore() {
     dcRef.current.send(JSON.stringify({ type: "response.create" }))
   }
 
+  const saveMemory = async (msgs: Message[]) => {
+    if (msgs.length < 2) return
+    try {
+      await fetch("/api/jarvis/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: msgs }),
+      })
+    } catch {}
+  }
+
   const saveConversation = async (msgs: Message[]) => {
     if (msgs.length < 2) return
     try {
@@ -359,7 +370,10 @@ export function JarvisCore() {
   }
 
   const handleNewConversation = () => {
-    if (messages.length > 1) saveConversation(messages)
+    if (messages.length > 1) {
+      saveConversation(messages)
+      saveMemory(messages)
+    }
     setMessages([])
     window.location.reload()
   }

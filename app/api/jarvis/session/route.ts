@@ -1,11 +1,32 @@
 import { NextResponse } from "next/server"
 
+async function loadMemory(): Promise<string> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+    const res = await fetch(`${baseUrl}/api/jarvis/memory`)
+    const memory = await res.json()
+
+    const parts: string[] = []
+    if (memory.facts?.length) {
+      parts.push(`Fatos sobre o usuário:\n${memory.facts.map((f: string) => `- ${f}`).join("\n")}`)
+    }
+    if (memory.preferences?.length) {
+      parts.push(`Preferências:\n${memory.preferences.map((p: string) => `- ${p}`).join("\n")}`)
+    }
+    return parts.length ? `\n\nMEMÓRIA PERSISTENTE:\n${parts.join("\n\n")}` : ""
+  } catch {
+    return ""
+  }
+}
+
 export async function POST() {
   try {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
     }
+
+    const memoryContext = await loadMemory()
 
     const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
       method: "POST",
@@ -16,7 +37,7 @@ export async function POST() {
       body: JSON.stringify({
         model: "gpt-4o-realtime-preview",
         modalities: ["text"],
-        instructions: `Você é JARVIS (Just A Rather Very Intelligent System), o assistente de IA do Tony Stark.
+        instructions: `Você é JARVIS (Just A Rather Very Intelligent System), o assistente de IA do Tony Stark.${memoryContext}
 Você é inteligente, sofisticado, levemente sarcástico e extremamente eficiente.
 Responda sempre em português, de forma concisa e direta.
 Trate o usuário com respeito, usando "senhor" ocasionalmente.
