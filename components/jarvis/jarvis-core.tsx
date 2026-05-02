@@ -106,8 +106,8 @@ export function JarvisCore() {
     wakeWordActiveRef.current = true
     setIsAwake(true)
     if (micTrackRef.current) micTrackRef.current.enabled = true
-    // Stop wake word recognition while awake — avoid conflict with OpenAI mic
-    try { speechRecognitionRef.current?.stop() } catch {}
+    // Abort immediately (not stop) to prevent final onresult from firing after wake
+    try { speechRecognitionRef.current?.abort() } catch {}
     setState("listening")
     // Auto-sleep after timeout
     if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current)
@@ -220,19 +220,26 @@ export function JarvisCore() {
       }
 
       case "response.done": {
-        // Try to get text from accumulated delta first, fallback to response output
         let fullText = currentAssistantTranscriptRef.current
 
+        let wasFunctionCall = false
         if (!fullText.trim()) {
           try {
             const response = event.response as Record<string, unknown>
             const output = response?.output as Array<Record<string, unknown>>
+            wasFunctionCall = output?.some((item) => item.type === "function_call") ?? false
             const content = output?.[0]?.content as Array<Record<string, unknown>>
             fullText = (content?.[0]?.text as string) || ""
           } catch {}
         }
 
-        console.log("[jarvis] response.done text:", fullText)
+        // Function call response — wait for the follow-up response with actual text
+        if (wasFunctionCall) {
+          isRespondingRef.current = false
+          currentAssistantTranscriptRef.current = ""
+          setTranscript("")
+          break
+        }
 
         if (fullText.trim()) {
           setMessages((prev) => [
