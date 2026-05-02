@@ -15,7 +15,7 @@ import argparse
 
 # pythonw.exe has no console — redirect stdout/stderr to avoid crashes
 if sys.stdout is None:
-    sys.stdout = open(os.path.join(os.path.expanduser("~"), "jarvis_agent.log"), "a", buffering=1)
+    sys.stdout = open(os.path.join(os.path.expanduser("~"), "jarvis_agent.log"), "a", encoding="utf-8", buffering=1)
 if sys.stderr is None:
     sys.stderr = sys.stdout
 
@@ -191,7 +191,7 @@ async def send_stats_loop(ws):
 
 
 async def connect(server_url: str):
-    print(f"🤖 JARVIS Agent ({SYSTEM}) conectando em {server_url}...")
+    print(f"[JARVIS] Agent ({SYSTEM}) conectando em {server_url}...")
 
     while True:
         try:
@@ -204,7 +204,7 @@ async def connect(server_url: str):
 
                 msg = json.loads(await ws.recv())
                 agent_id = msg.get("agentId", "unknown")
-                print(f"✅ Conectado! ID: {agent_id}")
+                print(f"[JARVIS] Conectado! ID: {agent_id}")
 
                 asyncio.create_task(send_stats_loop(ws))
 
@@ -214,7 +214,7 @@ async def connect(server_url: str):
                     action = data.get("action")
                     params = data.get("params", {})
 
-                    print(f"▶ {action} {params}")
+                    print(f"[JARVIS] {action} {params}")
                     result = handle_action(action, params)
 
                     if "error" in result:
@@ -223,7 +223,7 @@ async def connect(server_url: str):
                         await ws.send(json.dumps({"type": "result", "commandId": command_id, "result": result}))
 
         except Exception as e:
-            print(f"⚠ Desconectado: {e}. Reconectando em 5s...")
+            print(f"[JARVIS] Desconectado: {e}. Reconectando em 5s...")
             await asyncio.sleep(5)
 
 
