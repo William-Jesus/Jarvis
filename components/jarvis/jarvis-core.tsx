@@ -85,7 +85,7 @@ export function JarvisCore() {
     }
   }
 
-  const isWakeWord = (text: string) => /\b(jarvis)\b/i.test(text)
+  const isWakeWord = (text: string) => /\b(jarvis|jarvi|jarvi[sz]|j[áa]rvis)\b/i.test(text)
 
   const handleRealtimeEvent = (event: Record<string, unknown>) => {
     const type = event.type as string
