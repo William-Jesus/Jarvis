@@ -7,6 +7,7 @@ import { ConversationPanel } from "./conversation-panel"
 import { HudOverlay } from "./hud-overlay"
 import { CircularInterface } from "./circular-interface"
 import { ConversationSidebar, type SavedConversation } from "./conversation-sidebar"
+import { NeuralBackground } from "./neural-background"
 
 export type JarvisState = "idle" | "listening" | "thinking" | "speaking"
 
@@ -427,6 +428,7 @@ export function JarvisCore() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[var(--jarvis-dark)]">
+      <NeuralBackground />
       <div
         className="absolute inset-0 opacity-10"
         style={{
