@@ -16,6 +16,15 @@ wss.on("connection", (ws) => {
       const msg = JSON.parse(data.toString())
 
       if (msg.type === "register") {
+        // Disconnect any existing agent with same hostname+platform
+        for (const [existingId, existing] of agents.entries()) {
+          if (existing.hostname === msg.hostname && existing.platform === msg.platform) {
+            existing.ws.terminate()
+            agents.delete(existingId)
+            agentStats.delete(existingId)
+            console.log(`[agent] Replaced duplicate: ${existingId} (${msg.hostname})`)
+          }
+        }
         agents.set(agentId, {
           ws,
           id: agentId,
