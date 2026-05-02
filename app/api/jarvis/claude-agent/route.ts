@@ -115,7 +115,7 @@ async function listEmails(maxResults = 5, query = ""): Promise<string> {
   }
 }
 
-const tools: (Anthropic.Tool | { type: string })[] = [
+const tools: any[] = [
   { type: "web_search_20250305", name: "web_search" },
   {
     name: "bash",
@@ -223,7 +223,7 @@ O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
       if (response.stop_reason === "end_turn") break
 
       if (response.stop_reason === "tool_use") {
-        messages.push({ role: "assistant", content: response.content })
+        messages.push({ role: "assistant", content: response.content as any })
 
         const allToolUses = response.content.filter((b: any) => b.type === "tool_use") as Anthropic.ToolUseBlock[]
         // Web search is executed server-side by Anthropic — results already in response.content

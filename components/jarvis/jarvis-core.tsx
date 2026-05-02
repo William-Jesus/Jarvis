@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { usePorcupine } from "@picovoice/porcupine-react"
+import { BuiltInKeyword } from "@picovoice/porcupine-web"
 import { VoiceVisualizer } from "./voice-visualizer"
 import { StatusIndicator } from "./status-indicator"
 import { ConversationPanel } from "./conversation-panel"
@@ -43,11 +45,12 @@ export function JarvisCore() {
   const micTrackRef = useRef<MediaStreamTrack | null>(null)
   const wakeWordActiveRef = useRef(false)
   const wakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const speechRecognitionRef = useRef<any>(null)
   const [isAwake, setIsAwake] = useState(false)
   const [isFollowUp, setIsFollowUp] = useState(false)
   const WAKE_TIMEOUT = 20000
   const FOLLOWUP_TIMEOUT = 8000
+
+  const { keywordDetection, isLoaded: porcupineLoaded, init: porcupineInit, start: porcupineStart, stop: porcupineStop } = usePorcupine()
 
   useEffect(() => {
     stateRef.current = state
@@ -94,64 +97,50 @@ export function JarvisCore() {
     }
   }
 
-  const deactivateWake = () => {
+  const deactivateWake = useCallback(() => {
     wakeWordActiveRef.current = false
     setIsAwake(false)
     setIsFollowUp(false)
     if (micTrackRef.current) micTrackRef.current.enabled = false
     if (wakeTimerRef.current) { clearTimeout(wakeTimerRef.current); wakeTimerRef.current = null }
     setState("idle")
-    try { speechRecognitionRef.current?.start() } catch {}
-  }
+    porcupineStart().catch(() => {})
+  }, [porcupineStart])
 
-  const activateWake = () => {
+  const activateWake = useCallback(() => {
     wakeWordActiveRef.current = true
     setIsAwake(true)
     if (micTrackRef.current) micTrackRef.current.enabled = true
-    // Abort immediately (not stop) to prevent final onresult from firing after wake
-    try { speechRecognitionRef.current?.abort() } catch {}
+    porcupineStop().catch(() => {})
     setState("listening")
-    // Auto-sleep after timeout
     if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current)
     wakeTimerRef.current = setTimeout(deactivateWake, WAKE_TIMEOUT)
-  }
+  }, [porcupineStop, deactivateWake])
 
-  const startWakeWordDetection = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return
+  // Porcupine wake word detection — initialized once connection is established
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_PICOVOICE_KEY
+    if (!key || porcupineLoaded) return
+    porcupineInit(
+      key,
+      [{ builtin: BuiltInKeyword.Jarvis, sensitivity: 0.6 }],
+      { publicPath: "/porcupine/porcupine_params.pv" }
+    ).catch(console.error)
+  }, [porcupineLoaded, porcupineInit])
 
-    const recognition = new SpeechRecognition()
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.lang = "pt-BR"
-
-    recognition.onresult = (event: any) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const text = event.results[i][0].transcript.toLowerCase()
-        if (/jarv(is|i|iz)/.test(text) && !wakeWordActiveRef.current) {
-          activateWake()
-          return
-        }
-      }
+  // Start listening for wake word when connected
+  useEffect(() => {
+    if (porcupineLoaded && connected && !wakeWordActiveRef.current) {
+      porcupineStart().catch(console.error)
     }
+  }, [porcupineLoaded, connected, porcupineStart])
 
-    recognition.onend = () => {
-      // Auto-restart when sleeping
-      if (!wakeWordActiveRef.current) {
-        try { recognition.start() } catch {}
-      }
+  // Handle Porcupine detection
+  useEffect(() => {
+    if (keywordDetection !== null && !wakeWordActiveRef.current) {
+      activateWake()
     }
-
-    recognition.onerror = (e: any) => {
-      if (e.error === "not-allowed") return
-      if (!wakeWordActiveRef.current) {
-        setTimeout(() => { try { recognition.start() } catch {} }, 1000)
-      }
-    }
-
-    try { recognition.start() } catch {}
-    speechRecognitionRef.current = recognition
-  }
+  }, [keywordDetection, activateWake])
 
   const handleRealtimeEvent = (event: Record<string, unknown>) => {
     const type = event.type as string
@@ -377,12 +366,11 @@ export function JarvisCore() {
       dc.onopen = () => {
         setConnected(true)
         setState("idle")
-        startWakeWordDetection()
       }
       dc.onclose = () => {
         setConnected(false)
         setState("idle")
-        try { speechRecognitionRef.current?.stop() } catch {}
+        porcupineStop().catch(() => {})
       }
 
       // SDP negotiation
