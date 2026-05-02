@@ -179,7 +179,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
         turn_detection: {
           type: "server_vad",
           threshold: 0.3,
-          silence_duration_ms: 500,
+          silence_duration_ms: 800,
           prefix_padding_ms: 200,
           create_response: false,
         },

@@ -38,6 +38,8 @@ export function JarvisCore() {
   const stateRef = useRef<JarvisState>("idle")
   const currentUserTranscriptRef = useRef("")
   const currentAssistantTranscriptRef = useRef("")
+  const isRespondingRef = useRef(false)
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     stateRef.current = state
@@ -91,6 +93,15 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       case "input_audio_buffer.speech_started":
         setState("listening")
         currentUserTranscriptRef.current = ""
+        // Barge-in: user started speaking, cancel any ongoing response/TTS
+        if (isRespondingRef.current) {
+          cancelResponse()
+          isRespondingRef.current = false
+        }
+        if (ttsAudioRef.current) {
+          ttsAudioRef.current.pause()
+          ttsAudioRef.current = null
+        }
         break
 
       case "input_audio_buffer.speech_stopped":
@@ -114,7 +125,8 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
           },
         ])
 
-        if (dcRef.current?.readyState === "open") {
+        if (dcRef.current?.readyState === "open" && !isRespondingRef.current) {
+          isRespondingRef.current = true
           dcRef.current.send(JSON.stringify({ type: "response.create" }))
         }
         break
@@ -122,6 +134,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
 
       case "response.output_item.added":
         setState("thinking")
+        isRespondingRef.current = true
         currentAssistantTranscriptRef.current = ""
         break
 
@@ -169,6 +182,7 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
         } else {
           setState("listening")
         }
+        isRespondingRef.current = false
         currentAssistantTranscriptRef.current = ""
         setTranscript("")
         break
@@ -219,18 +233,22 @@ const handleRealtimeEvent = (event: Record<string, unknown>) => {
       const audioBlob = await response.blob()
       const audioUrl = URL.createObjectURL(audioBlob)
       const audio = new Audio(audioUrl)
+      ttsAudioRef.current = audio
 
       audio.onended = () => {
+        ttsAudioRef.current = null
         URL.revokeObjectURL(audioUrl)
         setState("listening")
       }
       audio.onerror = () => {
+        ttsAudioRef.current = null
         URL.revokeObjectURL(audioUrl)
         setState("listening")
       }
 
       await audio.play()
     } catch {
+      ttsAudioRef.current = null
       setState("listening")
     }
   }
