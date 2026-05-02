@@ -116,7 +116,7 @@ async function listEmails(maxResults = 5, query = ""): Promise<string> {
 }
 
 const tools: (Anthropic.Tool | { type: string })[] = [
-  { type: "web_search_20250305" },
+  { type: "web_search_20250305", name: "web_search" },
   {
     name: "bash",
     description: "Executa um comando bash no servidor.",
