@@ -64,9 +64,21 @@ def open_app(app_name: str) -> dict:
         subprocess.Popen(["open", "-a", resolved])
         return {"message": f"{resolved} aberto"}
     elif SYSTEM == "Windows":
-        resolved = APP_MAP_WIN.get(name, app_name)
-        os.startfile(resolved)
-        return {"message": f"{resolved} aberto"}
+        import glob
+        start_menu_dirs = [
+            os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs"),
+            r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
+        ]
+        for start_dir in start_menu_dirs:
+            for lnk in glob.glob(os.path.join(start_dir, "**", "*.lnk"), recursive=True):
+                if name in os.path.basename(lnk).lower():
+                    os.startfile(lnk)
+                    return {"message": f"{app_name} aberto via Menu Iniciar"}
+        try:
+            os.startfile(app_name)
+            return {"message": f"{app_name} aberto"}
+        except Exception:
+            return {"error": f"App '{app_name}' não encontrado no Menu Iniciar"}
     else:
         subprocess.Popen(["xdg-open", app_name])
         return {"message": f"{app_name} aberto"}
