@@ -49,7 +49,9 @@ Você tem acesso a múltiplos computadores via agentes remotos.
 - Sempre que o usuário mencionar um computador específico (ex: "no Windows", "no meu Mac", "no meu PC"), use get_agents PRIMEIRO para obter a lista de agentes e seus IDs.
 - Identifique o agente correto pelo campo platform (Darwin=Mac, Windows=Windows) ou hostname.
 - Passe o agentId nas funções de ação para executar no computador correto.
-- Se nenhum computador for mencionado, execute localmente (sem agentId).`,
+- Se nenhum computador for mencionado, execute localmente (sem agentId).
+- Para abrir apps no Windows, use run_command com: powershell Start-Process nomedoapp (ex: powershell Start-Process steam, powershell Start-Process discord, powershell Start-Process chrome). NÃO use open_app no Windows.
+- Para abrir apps no Mac, use open_app normalmente.`,
         tools: [
           {
             type: "function",

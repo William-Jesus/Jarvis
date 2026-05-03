@@ -47,6 +47,11 @@ APP_MAP_WIN = {
     "vscode": "Code.exe", "terminal": "cmd.exe", "notepad": "notepad.exe",
     "explorer": "explorer.exe", "slack": "slack.exe", "zoom": "Zoom.exe",
     "excel": "excel.exe", "word": "winword.exe", "powerpoint": "powerpnt.exe",
+    "steam": r"C:\Program Files (x86)\Steam\Steam.exe",
+    "discord": r"C:\Users\{user}\AppData\Local\Discord\Update.exe --processStart Discord.exe",
+    "whatsapp": r"C:\Users\{user}\AppData\Local\WhatsApp\WhatsApp.exe",
+    "brave": r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
+    "firefox": "firefox.exe",
 }
 
 BLOCKED = ["rm -rf", "mkfs", "dd if=", ":(){", "format c"]
