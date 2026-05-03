@@ -9,20 +9,21 @@ const pending = new Map()
 const agentStats = new Map()
 
 wss.on("connection", (ws) => {
-  const agentId = uuidv4()
+  let agentId = uuidv4()
 
   ws.on("message", (data) => {
     try {
       const msg = JSON.parse(data.toString())
 
       if (msg.type === "register") {
-        // Disconnect any existing agent with same hostname+platform
+        // Reuse existing ID for same hostname+platform (stable ID across reconnects)
         for (const [existingId, existing] of agents.entries()) {
           if (existing.hostname === msg.hostname && existing.platform === msg.platform) {
+            agentId = existingId
             existing.ws.terminate()
             agents.delete(existingId)
             agentStats.delete(existingId)
-            console.log(`[agent] Replaced duplicate: ${existingId} (${msg.hostname})`)
+            console.log(`[agent] Reconnected (same ID): ${agentId} (${msg.hostname})`)
           }
         }
         agents.set(agentId, {
