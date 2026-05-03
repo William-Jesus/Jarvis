@@ -51,20 +51,22 @@ export async function POST(request: Request) {
     }
 
     if (action === "wake_windows") {
-      // Send Wake-on-LAN magic packet via Mac agent (same local network as Windows)
-      const MAC = (process.env.WINDOWS_MAC_ADDRESS || "9C-6B-00-19-93-CF").replace(/-/g, ":")
-      const wolScript = `python3 -c "
-import socket, struct
-mac = '${MAC}'.replace(':','').replace('-','')
-magic = bytes.fromhex('FF'*6 + mac*16)
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-s.sendto(magic, ('255.255.255.255', 9))
-s.close()
-print('Magic packet enviado para ${MAC}')
-"`
-      await execAsync(wolScript)
-      return NextResponse.json({ success: true, result: "Magic packet enviado. O Windows deve ligar em alguns segundos." })
+      // WoL must be sent from Mac agent on the same LAN as Windows — not from VPS
+      const wsApi = process.env.WS_API_URL || "http://localhost:3003"
+      const agentsRes = await fetch(`${wsApi}/agents`)
+      const agentsData = await agentsRes.json()
+      const macAgent = (agentsData.agents || []).find((a: { platform: string }) => a.platform === "Darwin")
+      if (!macAgent) {
+        return NextResponse.json({ error: "Mac agent não conectado — necessário para Wake-on-LAN" }, { status: 503 })
+      }
+      const MAC = (process.env.WINDOWS_MAC_ADDRESS || "9C6B001993CF").replace(/[:\-]/g, "").toUpperCase()
+      const wolScript = `python3 -c "import socket; mac='${MAC}'; magic=bytes.fromhex('FF'*6+mac*16); s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1); s.sendto(magic,('255.255.255.255',9)); s.close(); print('ok')"`
+      await fetch(`${wsApi}/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: macAgent.id, action: "run_command", params: { command: wolScript } }),
+      })
+      return NextResponse.json({ success: true, result: "Magic packet enviado pelo Mac. O Windows deve ligar em alguns segundos." })
     }
 
     if (action === "ask_claude") {
