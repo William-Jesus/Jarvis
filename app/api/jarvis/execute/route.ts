@@ -60,13 +60,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Mac agent não conectado — necessário para Wake-on-LAN" }, { status: 503 })
       }
       const MAC = (process.env.WINDOWS_MAC_ADDRESS || "9C6B001993CF").replace(/[:\-]/g, "").toUpperCase()
-      const wolScript = `python3 -c "import socket; mac='${MAC}'; magic=bytes.fromhex('FF'*6+mac*16); s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1); s.sendto(magic,('255.255.255.255',9)); s.close(); print('ok')"`
+      // Get Mac IP to calculate subnet broadcast (more reliable than 255.255.255.255)
+      const ipRes = await fetch(`${wsApi}/command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: macAgent.id, action: "run_command", params: { command: "ipconfig getifaddr en0 || ipconfig getifaddr en1" } }),
+      })
+      const ipData = await ipRes.json()
+      const macIp = (ipData.result || "").trim()
+      const broadcast = macIp ? macIp.split(".").slice(0, 3).join(".") + ".255" : "255.255.255.255"
+      const wolScript = `python3 -c "import socket; mac='${MAC}'; magic=bytes.fromhex('FF'*6+mac*16); s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM); s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1); s.sendto(magic,('${broadcast}',9)); s.sendto(magic,('255.255.255.255',9)); s.close(); print('ok sent to ${broadcast}')"`
       await fetch(`${wsApi}/command`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: macAgent.id, action: "run_command", params: { command: wolScript } }),
       })
-      return NextResponse.json({ success: true, result: "Magic packet enviado pelo Mac. O Windows deve ligar em alguns segundos." })
+      return NextResponse.json({ success: true, result: `Magic packet enviado pelo Mac para ${broadcast}. O Windows deve ligar em alguns segundos.` })
     }
 
     if (action === "ask_claude") {
