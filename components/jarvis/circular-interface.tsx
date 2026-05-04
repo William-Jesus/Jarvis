@@ -24,7 +24,7 @@ export function CircularInterface({ state }: CircularInterfaceProps) {
     return () => clearInterval(id)
   }, [])
 
-  const cx = 290, cy = 290, SIZE = 580
+  const cx = 340, cy = 340, SIZE = 680
 
   // Outer block segments
   const blockCount = 80
@@ -86,8 +86,8 @@ export function CircularInterface({ state }: CircularInterfaceProps) {
   ]
 
   return (
-    <div className="relative" style={{ width: SIZE, height: SIZE }}>
-      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+    <div className="relative" style={{ width: SIZE * 0.85, height: SIZE * 0.85, overflow: "visible" }}>
+      <svg width={SIZE * 0.85} height={SIZE * 0.85} viewBox={`-30 -30 ${SIZE + 60} ${SIZE + 60}`} overflow="visible">
         <defs>
           <filter id="glow-xl" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="12" result="b1" />
