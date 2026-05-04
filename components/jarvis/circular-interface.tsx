@@ -24,7 +24,7 @@ export function CircularInterface({ state }: CircularInterfaceProps) {
     return () => clearInterval(id)
   }, [])
 
-  const cx = 340, cy = 340, SIZE = 680
+  const cx = 290, cy = 290, SIZE = 580
 
   // Outer block segments
   const blockCount = 80
