@@ -25,7 +25,7 @@ export function StatusIndicator({ state, transcript }: StatusIndicatorProps) {
       {/* Status badge with inline transcript */}
       <div
         className={cn(
-          "glass-panel flex items-center gap-3 rounded-full px-5 py-2 transition-all duration-300 max-w-sm",
+          "glass-panel flex max-w-sm items-center gap-3 rounded-full px-5 py-2 transition-all duration-300",
           state === "listening" && "animate-pulse-glow",
           state === "thinking" && "border-primary/50"
         )}

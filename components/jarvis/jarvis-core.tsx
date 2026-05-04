@@ -504,7 +504,7 @@ export function JarvisCore() {
   if (!mounted) return null
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[var(--jarvis-dark)]">
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-[var(--jarvis-dark)]">
       <NeuralBackground />
       <div
         className="absolute inset-0 opacity-10"
@@ -520,7 +520,7 @@ export function JarvisCore() {
       <HudOverlay state={state} />
       <ConversationSidebar onLoad={handleLoadConversation} onNew={handleNewConversation} />
 
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="relative z-10 flex h-full flex-col items-center justify-center p-4">
         <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
           <StatusIndicator state={state} transcript={transcript} />
           {connected && !isAwake && (
@@ -536,13 +536,13 @@ export function JarvisCore() {
         </div>
 
         {micPermission === "denied" && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-panel rounded-lg p-4 text-center">
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 glass-panel rounded-md p-4 text-center">
             <p className="text-sm text-muted-foreground mb-2">
               Permissão do microfone é necessária.
             </p>
             <button
               onClick={connect}
-              className="px-4 py-2 rounded bg-primary text-primary-foreground text-sm hover:bg-primary/90"
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
             >
               Ativar Microfone
             </button>
@@ -555,7 +555,7 @@ export function JarvisCore() {
           </div>
         )}
 
-<div className="relative">
+        <div className="relative">
           <CircularInterface state={state} />
           <div className="absolute inset-0 flex items-center justify-center">
             <VoiceVisualizer
@@ -566,22 +566,25 @@ export function JarvisCore() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 flex flex-col">
+        <div className="absolute bottom-4 left-4 right-4 z-50 flex flex-col items-center gap-2">
           <ConversationPanel messages={messages} />
-          <form onSubmit={handleTextSubmit} className="p-2 bg-background/80 backdrop-blur-sm border-t border-border">
-            <div className="max-w-2xl mx-auto flex gap-3">
+          <form
+            onSubmit={handleTextSubmit}
+            className="w-full max-w-2xl rounded-md border border-cyan-300/25 bg-black/65 p-2 shadow-[0_0_22px_rgba(0,174,255,0.18)] backdrop-blur-md"
+          >
+            <div className="flex gap-3">
               <input
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder={connected ? "Fale ou digite uma mensagem..." : "Conectando..."}
                 disabled={!connected || state === "thinking" || state === "speaking"}
-                className="flex-1 px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="min-w-0 flex-1 rounded-md border border-cyan-300/20 bg-cyan-950/20 px-3 py-2 font-mono text-sm text-cyan-50 placeholder:text-cyan-200/35 focus:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 disabled:cursor-not-allowed disabled:opacity-50"
               />
               <button
                 type="submit"
                 disabled={!textInput.trim() || !connected}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="rounded-md border border-cyan-300/30 bg-cyan-400 px-4 py-2 font-mono text-sm font-bold text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Enviar
               </button>

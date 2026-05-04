@@ -36,7 +36,7 @@ export function ConversationPanel({ messages }: ConversationPanelProps) {
   }
 
   return (
-    <div className="glass-panel mx-auto max-w-2xl rounded-t-xl">
+    <div className="w-full max-w-2xl rounded-md border border-cyan-300/20 bg-black/60 shadow-[0_0_18px_rgba(0,174,255,0.16)] backdrop-blur-md">
       <div
         ref={scrollRef}
         className="max-h-[18vh] overflow-y-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-primary/20"

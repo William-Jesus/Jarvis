@@ -86,8 +86,8 @@ export function CircularInterface({ state }: CircularInterfaceProps) {
   ]
 
   return (
-    <div className="relative" style={{ width: SIZE * 0.85, height: SIZE * 0.85, overflow: "visible" }}>
-      <svg width={SIZE * 0.85} height={SIZE * 0.85} viewBox={`-30 -30 ${SIZE + 60} ${SIZE + 60}`} overflow="visible">
+    <div className="relative" style={{ width: "min(70vw, 62dvh, 578px)", height: "min(70vw, 62dvh, 578px)", overflow: "visible" }}>
+      <svg width="100%" height="100%" viewBox={`-30 -30 ${SIZE + 60} ${SIZE + 60}`} overflow="visible">
         <defs>
           <filter id="glow-xl" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="12" result="b1" />
