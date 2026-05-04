@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import Anthropic from "@anthropic-ai/sdk"
+import { trackClaude } from "@/lib/usage-tracker"
 import { exec } from "child_process"
 import { promisify } from "util"
 import fs from "fs/promises"
@@ -308,6 +309,8 @@ O fuso horário do usuário é America/Sao_Paulo (GMT-3).`,
         tools: tools as any,
         messages,
       } as any, { headers: { "anthropic-beta": "web-search-2025-03-05" } })
+
+      trackClaude(response.usage.input_tokens, response.usage.output_tokens).catch(() => {})
 
       for (const block of response.content) {
         if (block.type === "text") finalResult = block.text

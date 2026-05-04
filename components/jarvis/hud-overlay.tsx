@@ -17,6 +17,11 @@ export function HudOverlay({ state }: HudOverlayProps) {
   const [temp, setTemp] = useState(36)
   const [scanY, setScanY] = useState(0)
   const [remoteAgents, setRemoteAgents] = useState<Array<{id: string, platform: string, hostname: string, stats: Record<string, number> | null}>>([])
+  const [usage, setUsage] = useState<{
+    claude: { today: { calls: number, inputTokens: number, outputTokens: number, costUSD: number }, total: { calls: number, inputTokens: number, outputTokens: number, costUSD: number } }
+    gpt: { today: { sessions: number }, total: { sessions: number } }
+  } | null>(null)
+  const [vps, setVps] = useState<{ cpu: number, memory: number, disk: number } | null>(null)
 
   useEffect(() => {
     const fetchAgents = async () => {
@@ -28,6 +33,20 @@ export function HudOverlay({ state }: HudOverlayProps) {
     }
     fetchAgents()
     const interval = setInterval(fetchAgents, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        const res = await fetch("/api/jarvis/usage")
+        const data = await res.json()
+        setUsage(data.usage)
+        setVps(data.vps)
+      } catch {}
+    }
+    fetchUsage()
+    const interval = setInterval(fetchUsage, 10000)
     return () => clearInterval(interval)
   }, [])
 
@@ -112,6 +131,38 @@ export function HudOverlay({ state }: HudOverlayProps) {
           <div className="text-[9px] font-mono text-cyan-500/50 mt-1">SCAN RADIUS: 5km</div>
           <div className="text-[9px] font-mono text-cyan-500/50">TARGETS: 0</div>
         </div>
+
+        {/* Claude usage panel */}
+        <div className="rounded border border-violet-500/30 bg-black/40 backdrop-blur-sm p-3 w-44">
+          <div className="text-[9px] font-mono text-violet-400/70 mb-2 tracking-widest">CLAUDE API</div>
+          <div className="text-[9px] font-mono text-violet-300/50 mb-1">TODAY</div>
+          <div className="space-y-1">
+            {[
+              ["CALLS", usage?.claude.today.calls ?? 0],
+              ["IN", (usage?.claude.today.inputTokens ?? 0).toLocaleString() + " tk"],
+              ["OUT", (usage?.claude.today.outputTokens ?? 0).toLocaleString() + " tk"],
+              ["COST", "$" + (usage?.claude.today.costUSD ?? 0).toFixed(4)],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex justify-between">
+                <span className="text-[9px] font-mono text-cyan-500/50">{k}</span>
+                <span className="text-[9px] font-mono text-violet-300">{v}</span>
+              </div>
+            ))}
+          </div>
+          <div className="h-px bg-violet-500/10 my-1.5" />
+          <div className="text-[9px] font-mono text-violet-300/50 mb-1">TOTAL</div>
+          <div className="space-y-1">
+            {[
+              ["CALLS", usage?.claude.total.calls ?? 0],
+              ["COST", "$" + (usage?.claude.total.costUSD ?? 0).toFixed(4)],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex justify-between">
+                <span className="text-[9px] font-mono text-cyan-500/50">{k}</span>
+                <span className="text-[9px] font-mono text-violet-300">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Right panel */}
@@ -157,6 +208,43 @@ export function HudOverlay({ state }: HudOverlayProps) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* VPS Cloud panel */}
+        <div className="rounded border border-cyan-500/20 bg-black/40 backdrop-blur-sm p-3 w-44">
+          <div className="text-[9px] font-mono text-cyan-500/60 mb-1 tracking-widest">☁ VPS CLOUD</div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-[9px] font-mono text-green-400">ONLINE</span>
+          </div>
+          <div className="space-y-1.5">
+            {([["CPU", vps?.cpu ?? 0, "#00ffff"], ["MEM", vps?.memory ?? 0, "#00ff88"], ["DSK", vps?.disk ?? 0, "#ffa500"]] as [string, number, string][]).map(([label, val, color]) => (
+              <div key={label} className="flex items-center gap-2">
+                <span className="text-[9px] font-mono text-cyan-500/50 w-7">{label}</span>
+                <div className="flex-1 h-px bg-cyan-900/50 overflow-hidden">
+                  <div className="h-full transition-all duration-700" style={{ width: `${val}%`, background: color }} />
+                </div>
+                <span className="text-[9px] font-mono w-7 text-right" style={{ color }}>{val}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* GPT usage panel */}
+        <div className="rounded border border-emerald-500/30 bg-black/40 backdrop-blur-sm p-3 w-44">
+          <div className="text-[9px] font-mono text-emerald-400/70 mb-2 tracking-widest">GPT REALTIME</div>
+          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TODAY</div>
+          <div className="flex justify-between mb-1.5">
+            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
+            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.today.sessions ?? 0}</span>
+          </div>
+          <div className="h-px bg-emerald-500/10 my-1.5" />
+          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TOTAL</div>
+          <div className="flex justify-between">
+            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
+            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.total.sessions ?? 0}</span>
+          </div>
+          <div className="text-[9px] font-mono text-cyan-500/30 mt-2">REALTIME API</div>
         </div>
 
         {/* Remote agents panels */}

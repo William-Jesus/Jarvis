@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { trackGptSession } from "@/lib/usage-tracker"
 
 async function loadMemory(): Promise<string> {
   try {
@@ -217,6 +218,7 @@ Você tem acesso a múltiplos computadores via agentes remotos.
     }
 
     const data = await response.json()
+    trackGptSession().catch(() => {})
     return NextResponse.json({ client_secret: data.client_secret })
   } catch (error) {
     console.error("Session error:", error)
