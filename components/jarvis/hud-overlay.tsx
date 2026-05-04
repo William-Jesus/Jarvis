@@ -124,14 +124,6 @@ export function HudOverlay({ state }: HudOverlayProps) {
           </div>
         </div>
 
-        {/* Threat panel */}
-        <div className="rounded border border-cyan-500/20 bg-black/40 backdrop-blur-sm p-3 w-44">
-          <div className="text-[9px] font-mono text-cyan-500/60 mb-2 tracking-widest">THREAT ANALYSIS</div>
-          <div className="text-[9px] font-mono text-green-400">■ NO THREATS DETECTED</div>
-          <div className="text-[9px] font-mono text-cyan-500/50 mt-1">SCAN RADIUS: 5km</div>
-          <div className="text-[9px] font-mono text-cyan-500/50">TARGETS: 0</div>
-        </div>
-
         {/* Claude usage panel */}
         <div className="rounded border border-violet-500/30 bg-black/40 backdrop-blur-sm p-3 w-44">
           <div className="text-[9px] font-mono text-violet-400/70 mb-2 tracking-widest">CLAUDE API</div>
@@ -163,6 +155,46 @@ export function HudOverlay({ state }: HudOverlayProps) {
             ))}
           </div>
         </div>
+
+        {/* GPT usage panel */}
+        <div className="rounded border border-emerald-500/30 bg-black/40 backdrop-blur-sm p-3 w-44">
+          <div className="text-[9px] font-mono text-emerald-400/70 mb-2 tracking-widest">GPT REALTIME</div>
+          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TODAY</div>
+          <div className="flex justify-between mb-1.5">
+            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
+            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.today.sessions ?? 0}</span>
+          </div>
+          <div className="h-px bg-emerald-500/10 my-1.5" />
+          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TOTAL</div>
+          <div className="flex justify-between">
+            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
+            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.total.sessions ?? 0}</span>
+          </div>
+          <div className="text-[9px] font-mono text-cyan-500/30 mt-2">REALTIME API</div>
+        </div>
+
+        {/* Mac agents */}
+        {remoteAgents.filter(a => a.stats && a.platform === "Darwin").map((agent) => (
+          <div key={agent.id} className="rounded border border-cyan-500/20 bg-black/40 backdrop-blur-sm p-3 w-44">
+            <div className="text-[9px] font-mono text-cyan-500/60 mb-1 tracking-widest">🍎 MAC</div>
+            <div className="text-[9px] font-mono text-cyan-400 mb-2 truncate">{agent.hostname}</div>
+            <div className="space-y-1.5">
+              {[["CPU", agent.stats?.cpu, "#00ffff"], ["MEM", agent.stats?.memory, "#00ff88"], ["DSK", agent.stats?.disk, "#ffa500"]].map(([label, val, color]) => (
+                <div key={label as string} className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono text-cyan-500/50 w-7">{label}</span>
+                  <div className="flex-1 h-px bg-cyan-900/50 overflow-hidden">
+                    <div className="h-full transition-all duration-700" style={{ width: `${val}%`, background: color as string }} />
+                  </div>
+                  <span className="text-[9px] font-mono w-7 text-right" style={{ color: color as string }}>{val}%</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mt-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-[9px] font-mono text-green-400">CONNECTED</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Right panel */}
@@ -230,36 +262,13 @@ export function HudOverlay({ state }: HudOverlayProps) {
           </div>
         </div>
 
-        {/* GPT usage panel */}
-        <div className="rounded border border-emerald-500/30 bg-black/40 backdrop-blur-sm p-3 w-44">
-          <div className="text-[9px] font-mono text-emerald-400/70 mb-2 tracking-widest">GPT REALTIME</div>
-          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TODAY</div>
-          <div className="flex justify-between mb-1.5">
-            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
-            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.today.sessions ?? 0}</span>
-          </div>
-          <div className="h-px bg-emerald-500/10 my-1.5" />
-          <div className="text-[9px] font-mono text-emerald-300/50 mb-1">TOTAL</div>
-          <div className="flex justify-between">
-            <span className="text-[9px] font-mono text-cyan-500/50">SESSIONS</span>
-            <span className="text-[9px] font-mono text-emerald-300">{usage?.gpt.total.sessions ?? 0}</span>
-          </div>
-          <div className="text-[9px] font-mono text-cyan-500/30 mt-2">REALTIME API</div>
-        </div>
-
-        {/* Remote agents panels */}
-        {remoteAgents.filter(a => a.stats).map((agent) => (
+        {/* Windows agents */}
+        {remoteAgents.filter(a => a.stats && a.platform === "Windows").map((agent) => (
           <div key={agent.id} className="rounded border border-cyan-500/20 bg-black/40 backdrop-blur-sm p-3 w-44">
-            <div className="text-[9px] font-mono text-cyan-500/60 mb-1 tracking-widest">
-              {agent.platform === "Windows" ? "⬛ WINDOWS" : "🍎 MAC"}
-            </div>
+            <div className="text-[9px] font-mono text-cyan-500/60 mb-1 tracking-widest">⬛ WINDOWS</div>
             <div className="text-[9px] font-mono text-cyan-400 mb-2 truncate">{agent.hostname}</div>
             <div className="space-y-1.5">
-              {[
-                ["CPU", agent.stats?.cpu, "#00ffff"],
-                ["MEM", agent.stats?.memory, "#00ff88"],
-                ["DSK", agent.stats?.disk, "#ffa500"],
-              ].map(([label, val, color]) => (
+              {[["CPU", agent.stats?.cpu, "#00ffff"], ["MEM", agent.stats?.memory, "#00ff88"], ["DSK", agent.stats?.disk, "#ffa500"]].map(([label, val, color]) => (
                 <div key={label as string} className="flex items-center gap-2">
                   <span className="text-[9px] font-mono text-cyan-500/50 w-7">{label}</span>
                   <div className="flex-1 h-px bg-cyan-900/50 overflow-hidden">
