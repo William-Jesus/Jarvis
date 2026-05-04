@@ -70,10 +70,11 @@ def open_app(app_name: str) -> dict:
             r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
         ]
         for start_dir in start_menu_dirs:
-            for lnk in glob.glob(os.path.join(start_dir, "**", "*.lnk"), recursive=True):
-                if name in os.path.basename(lnk).lower():
-                    os.startfile(lnk)
-                    return {"message": f"{app_name} aberto via Menu Iniciar"}
+            for pattern in ("*.lnk", "*.url"):
+                for lnk in glob.glob(os.path.join(start_dir, "**", pattern), recursive=True):
+                    if name in os.path.basename(lnk).lower():
+                        os.startfile(lnk)
+                        return {"message": f"{app_name} aberto via Menu Iniciar"}
         try:
             os.startfile(app_name)
             return {"message": f"{app_name} aberto"}
