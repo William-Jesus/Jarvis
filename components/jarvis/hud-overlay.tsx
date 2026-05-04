@@ -162,6 +162,9 @@ export function HudOverlay({ state }: HudOverlayProps) {
       {/* ── LEFT COLUMN ── */}
       <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2.5 w-40">
 
+        {/* TEST: single floating circle */}
+        <GaugeCircle pct={cpu} label={`${cpu}%`} sub="CPU" color="#00ffff" />
+
         {/* STARK INDUSTRIES */}
         <div className="rounded border border-cyan-500/20 bg-black/50 backdrop-blur-sm p-2.5">
           <div className="text-[8px] font-mono text-cyan-500/50 mb-1.5 tracking-widest">STARK INDUSTRIES</div>
